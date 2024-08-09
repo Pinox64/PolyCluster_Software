@@ -374,6 +374,11 @@ namespace PCluster_PC_Utility
             PCluster1.LEDBrightness = calculateBrightness(trackBar1.Value);
         }
 
+        private void trackBar2_Scroll(object sender, EventArgs e)
+        {
+            PCluster1.LEDneedleBrightness = calculateBrightness(trackBar2.Value);
+        }
+
         private byte calculateBrightness(int value)
         {// Ensure value is within the valid range
             byte[] brightnessValues = { 1, 3, 7, 12, 20, 30, 45, 60, 75, 90, 100 };
@@ -464,17 +469,31 @@ namespace PCluster_PC_Utility
 
         private void btnDialColor_Click(object sender, EventArgs e)
         {
-            ColorDialog MyDialog = new ColorDialog();
-            // Keeps the user from selecting a custom color.
-            MyDialog.AllowFullOpen = false;
-            // Allows the user to get help. (The default is false.)
-            MyDialog.ShowHelp = true;
             // Sets the initial color select to the current text color.
-            MyDialog.Color = btnDialColor.BackColor;
+            colorDialog1.Color = btnDialColor.BackColor;
 
             // Update the text box color if the user clicks OK 
-            if (MyDialog.ShowDialog() == DialogResult.OK)
-                btnDialColor.BackColor = MyDialog.Color;
+            if (colorDialog1.ShowDialog() == DialogResult.OK)
+                btnDialColor.BackColor = colorDialog1.Color;
+            PCluster1.LEDdialColor = btnDialColor.BackColor;
+        }
+
+        private void buttonExit_Click(object sender, EventArgs e)
+        {
+            // Close the application when the exit button is clicked
+            applicationExiting = true;
+            this.Close();
+        }
+
+        private void btnNeedleColor_Click(object sender, EventArgs e)
+        {
+            // Sets the initial color select to the current text color.
+            colorDialog1.Color = btnDialColor.BackColor;
+
+            // Update the text box color if the user clicks OK 
+            if (colorDialog1.ShowDialog() == DialogResult.OK)
+                btnNeedleColor.BackColor = colorDialog1.Color;
+            PCluster1.LEDneedleColor = btnNeedleColor.BackColor;
         }
     }
 }

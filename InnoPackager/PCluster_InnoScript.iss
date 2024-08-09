@@ -7,6 +7,7 @@
 #define MyAppURL "www.systhetic.com"
 #define MyAppExeName "PCluster_PC_Utility.exe"
 #define MyAppManifestName "PCluster_PC_Utility.exe.manifest"
+#define MyAppIconName "PClusterIcon.ico"
 
 [Setup]
 AppId={{CA461BA6-5B7B-4BE1-835E-63530D342B33}
@@ -19,7 +20,7 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=admin
-OutputBaseFilename=mysetup
+OutputBaseFilename=PCluster_Installer
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -41,12 +42,12 @@ Source: "C:\Repos\PCluster_Software\PCluster_PC_Utility\PCluster_PC_Utility\bin\
 Source: "C:\Repos\PCluster_Software\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\Newtonsoft.Json.xml"; DestDir: "{app}"; Flags: ignoreversion
 Source: "C:\Repos\PCluster_Software\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\OpenHardwareMonitorLib.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "C:\Repos\PCluster_Software\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\PCluster_PC_Utility.exe.config"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Repos\PCluster_Software\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\PCluster_PC_Utility.pdb"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Repos\PCluster_Software\PCluster_PC_Utility\PCluster_PC_Utility\PClusterIcon.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
-Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: startupshortcut
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\PClusterIcon.ico"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\PClusterIcon.ico"; Tasks: desktopicon
+Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\PClusterIcon.ico"; Tasks: startupshortcut
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent shellexec runascurrentuser

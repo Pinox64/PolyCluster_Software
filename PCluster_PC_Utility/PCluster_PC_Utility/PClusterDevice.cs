@@ -1,6 +1,7 @@
 ﻿using HidLibrary;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Management;
 using System.Text;
@@ -17,8 +18,9 @@ namespace PCluster
         public string SerialID { get; set; }
         public byte LEDValue { get; set; }
         public byte LEDBrightness { get; set; }
-        public Int32 LEDdialColor { get; set; }
-        public Int32 LEDneedleColor { get; set; }
+        public byte LEDneedleBrightness { get; set; }
+        public Color LEDdialColor { get; set; }
+        public Color LEDneedleColor { get; set; }
         public bool Status { get; set; }
         public List<DisplayInfo> DisplayInfos { get; set; }
         public HidDevice Device { get; set; }
@@ -60,10 +62,14 @@ namespace PCluster
                             disp4.DisplayedInfo,
                             disp4.Value,
                             LEDValue,
-                            LEDBrightness
+                            LEDBrightness,
+                            LEDdialColor.R, LEDdialColor.G, LEDdialColor.B,
+                            LEDneedleBrightness,
+                            LEDneedleColor.R, LEDneedleColor.G, LEDneedleColor.B
           };
                     if (reset)
                     {
+                        reset = false;
                         reportdata[2] = 41;
                     }
                     if (bootLoaderMode)

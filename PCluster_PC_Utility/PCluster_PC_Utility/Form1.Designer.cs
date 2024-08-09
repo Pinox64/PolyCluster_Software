@@ -55,9 +55,13 @@ namespace PCluster_PC_Utility
             this.buttonRst = new System.Windows.Forms.Button();
             this.buttonExit = new System.Windows.Forms.Button();
             this.btnDialColor = new System.Windows.Forms.Button();
+            this.colorDialog1 = new System.Windows.Forms.ColorDialog();
+            this.btnNeedleColor = new System.Windows.Forms.Button();
+            this.trackBar2 = new System.Windows.Forms.TrackBar();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar1)).BeginInit();
             this.contextMenuStrip.SuspendLayout();
             this.statusStrip1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBar2)).BeginInit();
             this.SuspendLayout();
             // 
             // comboBox1
@@ -282,27 +286,56 @@ namespace PCluster_PC_Utility
             // 
             // buttonExit
             // 
-            this.buttonExit.Location = new System.Drawing.Point(324, 219);
+            this.buttonExit.Location = new System.Drawing.Point(451, 219);
             this.buttonExit.Name = "buttonExit";
             this.buttonExit.Size = new System.Drawing.Size(121, 23);
             this.buttonExit.TabIndex = 17;
-            this.buttonExit.Text = "Close All";
+            this.buttonExit.Text = "Exit Software";
             this.buttonExit.UseVisualStyleBackColor = true;
+            this.buttonExit.Click += new System.EventHandler(this.buttonExit_Click);
             // 
             // btnDialColor
             // 
             this.btnDialColor.Location = new System.Drawing.Point(168, 118);
             this.btnDialColor.Name = "btnDialColor";
+            this.btnDialColor.RightToLeft = System.Windows.Forms.RightToLeft.No;
             this.btnDialColor.Size = new System.Drawing.Size(23, 21);
             this.btnDialColor.TabIndex = 18;
             this.btnDialColor.UseVisualStyleBackColor = true;
             this.btnDialColor.Click += new System.EventHandler(this.btnDialColor_Click);
+            // 
+            // colorDialog1
+            // 
+            this.colorDialog1.AnyColor = true;
+            this.colorDialog1.FullOpen = true;
+            this.colorDialog1.ShowHelp = true;
+            this.colorDialog1.SolidColorOnly = true;
+            // 
+            // btnNeedleColor
+            // 
+            this.btnNeedleColor.Location = new System.Drawing.Point(295, 117);
+            this.btnNeedleColor.Name = "btnNeedleColor";
+            this.btnNeedleColor.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.btnNeedleColor.Size = new System.Drawing.Size(23, 21);
+            this.btnNeedleColor.TabIndex = 19;
+            this.btnNeedleColor.UseVisualStyleBackColor = true;
+            this.btnNeedleColor.Click += new System.EventHandler(this.btnNeedleColor_Click);
+            // 
+            // trackBar2
+            // 
+            this.trackBar2.Location = new System.Drawing.Point(197, 144);
+            this.trackBar2.Name = "trackBar2";
+            this.trackBar2.Size = new System.Drawing.Size(121, 45);
+            this.trackBar2.TabIndex = 20;
+            this.trackBar2.Scroll += new System.EventHandler(this.trackBar2_Scroll);
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(653, 300);
+            this.Controls.Add(this.trackBar2);
+            this.Controls.Add(this.btnNeedleColor);
             this.Controls.Add(this.btnDialColor);
             this.Controls.Add(this.buttonExit);
             this.Controls.Add(this.buttonRst);
@@ -330,6 +363,7 @@ namespace PCluster_PC_Utility
             this.contextMenuStrip.ResumeLayout(false);
             this.statusStrip1.ResumeLayout(false);
             this.statusStrip1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBar2)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -358,6 +392,9 @@ namespace PCluster_PC_Utility
         private Button buttonRst;
         private Button buttonExit;
         private Button btnDialColor;
+        private ColorDialog colorDialog1;
+        private Button btnNeedleColor;
+        private TrackBar trackBar2;
     }
 }
 
