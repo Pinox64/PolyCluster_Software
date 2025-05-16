@@ -1,0 +1,13 @@
+.{
+    .name = .PClusterDriver,
+    .version = "0.1.1",
+    .fingerprint = 0xa01f8bd4b11e2afa,
+
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "libs",
+    },
+}
