@@ -36,7 +36,6 @@ pub fn main() !void {
             break :blk PClusterConfig.default;
         };
         pcluster.release();
-        std.debug.print("{any}\n", .{pcluster.get().config});
     }
 
     const config_listener_thread = try std.Thread.spawn(.{}, configUpdaterTask, .{allocator});
@@ -93,10 +92,7 @@ fn configUpdaterLoop(allocator: Allocator, client: std.net.Server.Connection) !v
         var out_packet: protocol.ControllerBoundPacket = undefined;
 
         switch (in_packet) {
-            .request_config => {
-                out_packet = .{ .request_config_response = pcluster.get().config };
-                try out_packet.write(writer);
-            },
+            .disconnect => return,
             .set_config => |config| {
                 pcluster.acquire().config = config;
                 pcluster.release();

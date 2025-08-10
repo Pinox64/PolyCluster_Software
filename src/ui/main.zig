@@ -1,4 +1,5 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
 const clay = @import("zclay");
 const rl = @import("raylib");
 const common = @import("PClusterCommon");
@@ -10,6 +11,7 @@ const renderer = @import("raylib_render_clay.zig");
 var pcluster_config = common.Mutexed(PClusterConfig).init(.default);
 var driver_connected = common.Mutexed(bool).init(false);
 var pcluster_connected = common.Mutexed(bool).init(false);
+var system_information = common.Mutexed(common.SystemInformation).init(.init);
 
 pub fn main() !void {
     var debug_allocator: std.heap.DebugAllocator(.{ .thread_safe = true }) = .init;
@@ -78,31 +80,65 @@ pub fn main() !void {
     }
 }
 
-pub fn connectionWithDriverTask(allocator: std.mem.Allocator) void {
+var out_packet_queue = std.fifo.LinearFifo(protocol.DriverBoundPacket, .{ .Static = 64 }).init();
+var out_packet_sema = std.Thread.Semaphore{};
+
+pub fn connectionWithDriverTask(allocator: Allocator) void {
     while (true) {
-        defer std.Thread.sleep(std.time.ns_per_ms * 100);
+        connectWithDriver(allocator) catch continue;
+        std.Thread.sleep(std.time.ns_per_ms * 100);
+    }
+}
 
-        const conn = std.net.tcpConnectToHost(allocator, "127.0.0.1", protocol.default_port) catch continue;
-        defer conn.close();
+pub fn connectWithDriver(allocator: Allocator) !void {
+    const conn = try std.net.tcpConnectToHost(allocator, "127.0.0.1", protocol.default_port);
+    defer conn.close();
 
-        const writer = conn.writer();
-        const reader = conn.reader();
+    driver_connected.set(true);
+    defer driver_connected.set(false);
 
-        driver_connected.set(true);
-        defer driver_connected.set(false);
+    out_packet_queue.head = 0;
+    out_packet_sema = .{};
+    try out_packet_queue.writeItem(protocol.DriverBoundPacket{ .request_protocol_version = {} });
+    out_packet_sema.post();
+    const writer_thread = try std.Thread.spawn(.{}, driverWriteLoop, .{conn.writer()});
+    defer {
+        out_packet_sema.post();
+        writer_thread.join();
+    }
+    driverReadLoop(allocator, conn.reader());
+}
 
-        // TODO: State machine to handle logic
-        while (true) {
-            const out_packet = protocol.DriverBoundPacket{
-                .request_protocol_version = {},
-            };
-            out_packet.write(writer) catch break;
+pub fn driverWriteLoop(unbuffered_writer: anytype) void {
+    var buffered_writer = std.io.bufferedWriter(unbuffered_writer);
+    const writer = buffered_writer.writer();
+    while (true) {
+        out_packet_sema.wait();
+        const packet = out_packet_queue.readItem() orelse return;
+        std.debug.print("out_packet: {any}\n", .{packet});
+        packet.write(writer) catch return;
+        buffered_writer.flush() catch return;
+    }
+}
 
-            const in_packet = protocol.ControllerBoundPacket.read(allocator, reader) catch break;
-            defer in_packet.deinit(allocator);
-            std.debug.assert(in_packet == .request_protocol_version_response);
+pub fn driverReadLoop(allocator: Allocator, reader: anytype) void {
+    while (true) {
+        const in_packet = protocol.ControllerBoundPacket.read(allocator, reader) catch break;
+        defer in_packet.deinit(allocator);
 
-            std.Thread.sleep(std.time.ns_per_s * 10000);
+        switch (in_packet) {
+            .request_protocol_version_response => |p| {
+                if (protocol.version.eql(p) == false) {
+                    out_packet_queue.writeItem(.{ .disconnect = {} }) catch return;
+                    out_packet_sema.post();
+                }
+            },
+            .request_system_information_response => |p| {
+                system_information.set(p);
+            },
+            .set_pcluster_plugged => |p| {
+                pcluster_connected.set(p);
+            },
         }
     }
 }

@@ -18,6 +18,10 @@ const Version = struct {
 
         return result;
     }
+
+    pub fn eql(a: Version, b: Version) bool {
+        return a.major == b.major and a.minor == b.minor and a.patch == b.patch;
+    }
 };
 
 pub const default_port: u16 = 51423;
@@ -27,8 +31,8 @@ pub const version = Version.parse("0.1.0") catch unreachable;
 
 pub const ControllerBoundPacket = union(enum(u8)) {
     request_protocol_version_response: Version,
-    request_config_response: PClusterConfig,
     request_system_information_response: SystemInformation,
+    set_pcluster_plugged: bool,
 
     const methods = PacketMethods(@This());
     pub const write = methods.write;
@@ -38,9 +42,9 @@ pub const ControllerBoundPacket = union(enum(u8)) {
 
 pub const DriverBoundPacket = union(enum(u8)) {
     request_protocol_version: void,
-    request_config: void,
     request_system_information: void,
     set_config: PClusterConfig,
+    disconnect: void,
 
     const methods = PacketMethods(@This());
     pub const write = methods.write;
