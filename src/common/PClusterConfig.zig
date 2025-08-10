@@ -1,4 +1,5 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
 const PClusterConfig = @This();
 const SystemInformation = @import("SystemInformation.zig");
 const serial = @import("serial.zig");
@@ -20,12 +21,10 @@ pub const DisplayInfo = enum(u8) {
     mem_usage = 3,
     gpu_usage = 4,
     gpu_temperature = 5,
-    _,
 };
 
 pub const LEDMode = enum(u8) {
     solid = 1,
-    _,
 };
 
 pub const Dial = struct {
@@ -38,16 +37,40 @@ pub const Needle = struct {
     color: Color = .{},
 };
 
-displays: [4]DisplayInfo = [1]DisplayInfo{.off} ** 4,
+displays: [4]DisplayInfo = @splat(.off),
 led_mode: LEDMode = .solid,
 dial: Dial = .{},
 needle: Needle = .{},
+update_period_ms: u64 = 3000,
 
 pub const default = PClusterConfig{
+    .displays = [4]DisplayInfo{ .cpu_usage, .cpu_temperature, .mem_usage, .off },
+    .led_mode = .solid,
     .dial = .{ .brightness = 100, .color = .{ .r = 0, .g = 0, .b = 255 } },
     .needle = .{ .brightness = 100, .color = .{ .r = 0, .g = 255, .b = 0 } },
-    .displays = [4]DisplayInfo{ .cpu_usage, .cpu_temperature, .mem_usage, .off },
 };
+
+pub fn loadFromReader(allocator: Allocator, reader: anytype) !PClusterConfig {
+    var bytes = std.ArrayList(u8).init(allocator);
+    defer bytes.deinit();
+
+    try reader.readAllArrayList(&bytes, 8192);
+    const null_terminated_bytes: [:0]u8 = @ptrCast(bytes.items);
+
+    var status = std.zon.parse.Status{};
+    defer status.deinit(allocator);
+    return std.zon.parse.fromSlice(PClusterConfig, allocator, null_terminated_bytes, &status, .{}) catch |err| {
+        if (err == error.ParseZon) {
+            std.log.info("Config file at {}", .{status});
+        }
+
+        return err;
+    };
+}
+
+pub fn saveToWriter(pcluster_config: PClusterConfig, writer: anytype) !void {
+    return std.zon.stringify.serialize(pcluster_config, .{}, writer);
+}
 
 pub fn writeReport(pcluster_config: *const PClusterConfig, buffer: *[20]u8, info: SystemInformation) !void {
     var stream = std.io.fixedBufferStream(buffer);

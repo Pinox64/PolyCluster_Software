@@ -27,5 +27,16 @@ pub fn Mutexed(T: type) type {
         pub fn release(self: *Self) void {
             self.mutex.unlock();
         }
+
+        pub fn get(self: *Self) T {
+            const value = self.acquire().*;
+            self.release();
+            return value;
+        }
+
+        pub fn set(self: *Self, value: T) void {
+            self.acquire().* = value;
+            self.release();
+        }
     };
 }

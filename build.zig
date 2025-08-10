@@ -54,7 +54,7 @@ pub fn build(b: *std.Build) void {
     const ui_exe = b.addExecutable(.{
         .name = "PCluster_UI",
         .root_module = ui_exe_mod,
-        .use_llvm = false,
+        .use_llvm = target.result.os.tag == .windows,
     });
     ui_exe.linkLibrary(raylib_dep.artifact("raylib"));
     b.installArtifact(ui_exe);

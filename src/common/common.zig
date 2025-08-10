@@ -2,5 +2,16 @@ pub const serial = @import("serial.zig");
 pub const PClusterConfig = @import("PClusterConfig.zig");
 pub const SystemInformation = @import("SystemInformation.zig");
 pub const Mutexed = @import("Mutexed.zig").Mutexed;
+pub const protocol = @import("protocol.zig");
+pub const system = switch (@import("builtin").os.tag) {
+    .linux => @import("linux/system.zig"),
+    .windows => @import("windows/system.zig"),
+    .macos => @import("macos/system.zig"),
+    else => @compileError("Not implemented"),
+};
 
-pub const default_port: u16 = 80;
+test {
+    _ = @import("serial.zig");
+    _ = @import("PClusterConfig.zig");
+    _ = @import("protocol.zig");
+}

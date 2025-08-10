@@ -1,12 +1,6 @@
 const std = @import("std");
+const system = @import("common.zig").system;
 const SystemInformation = @This();
-
-const system = switch (@import("builtin").os.tag) {
-    .linux => @import("linux/system.zig"),
-    .windows => @import("windows/system.zig"),
-    .macos => @import("macos/system.zig"),
-    else => @compileError("Not implemented"),
-};
 
 cpu_usage_percent: f64,
 cpu_temperature_celsius: f64,

@@ -1,4 +1,7 @@
 const std = @import("std");
+const builtin = @import("builtin");
+
+const native_endian = builtin.cpu.arch.endian();
 
 pub fn serialize(data: anytype, writer: anytype, comptime endianness: std.builtin.Endian) !void {
     const T = @TypeOf(data);
@@ -23,10 +26,18 @@ pub fn serialize(data: anytype, writer: anytype, comptime endianness: std.builti
         .@"struct" => |t| inline for (t.fields) |field| {
             try serialize(@field(data, field.name), writer, endianness);
         },
+        .@"union" => {
+            if (typeInfoT.@"union".tag_type == null) @compileError("Union with no tag type not supported");
+            try serialize(std.meta.activeTag(data), writer, endianness);
+            switch (data) {
+                inline else => |e| try serialize(e, writer, endianness),
+            }
+        },
         .void, .null => {},
         .bool => try writer.writeByte(@intFromBool(data)),
-        inline .int, .float, .@"union" => {
-            const bytes = std.mem.toBytes(std.mem.nativeTo(T, data, endianness));
+        inline .int, .float => {
+            const Int = std.meta.Int(.unsigned, @bitSizeOf(T));
+            const bytes = std.mem.toBytes(std.mem.nativeTo(Int, @bitCast(data), endianness));
             try writer.writeAll(&bytes);
         },
         else => @compileError("Type not supported"),
@@ -38,7 +49,10 @@ pub fn deserialize(T: type, allocator: std.mem.Allocator, reader: anytype, compt
     var result: T = undefined;
     const typeInfoT = @typeInfo(T);
     switch (typeInfoT) {
-        .@"enum" => |t| result = @enumFromInt(try deserialize(t.tag_type, allocator, reader, endianness)),
+        .@"enum" => |t| {
+            const tag = try deserialize(t.tag_type, allocator, reader, endianness);
+            result = try std.meta.intToEnum(T, tag);
+        },
         .array => |t| inline for (&result) |*e| {
             e.* = try deserialize(t.child, allocator, reader, endianness);
         },
@@ -63,13 +77,21 @@ pub fn deserialize(T: type, allocator: std.mem.Allocator, reader: anytype, compt
         .@"struct" => |t| inline for (t.fields) |field| {
             @field(result, field.name) = try deserialize(field.type, allocator, reader, endianness);
         },
+        .@"union" => {
+            if (typeInfoT.@"union".tag_type == null) @compileError("Union with no tag type not supported");
+            const active_tag = try deserialize(std.meta.Tag(T), allocator, reader, endianness);
+            inline for (comptime std.meta.tags(typeInfoT.@"union".tag_type.?)) |tag| {
+                if (tag == active_tag) {
+                    return @unionInit(T, @tagName(tag), try deserialize(std.meta.TagPayload(T, tag), allocator, reader, endianness));
+                }
+            }
+        },
         .void, .null => {},
         .bool => result = try deserialize(u8, allocator, reader, endianness) == 1,
-        inline .int, .float, .@"union" => {
-            // TODO: Find a fix because @sizeOf is platform specific
-            // users wont be able to share configs in their binary form
+        inline .int, .float => {
             const raw_bytes = try reader.readBytesNoEof(@sizeOf(T));
-            result = std.mem.toNative(T, @bitCast(raw_bytes), endianness);
+            result = std.mem.bytesAsValue(T, &raw_bytes).*;
+            if (native_endian != endianness) result = @byteSwap(result);
         },
         else => @compileError("Type not supported"),
     }
@@ -78,9 +100,9 @@ pub fn deserialize(T: type, allocator: std.mem.Allocator, reader: anytype, compt
 
 pub fn deinitDeserializedType(deserialized: anytype, allocator: std.mem.Allocator) void {
     const T = @TypeOf(deserialized);
-    const typeInfo = @typeInfo(T);
+    const typeInfoT = @typeInfo(T);
 
-    switch (typeInfo) {
+    switch (typeInfoT) {
         .pointer => |t| {
             switch (t.size) {
                 .one => {
@@ -101,6 +123,12 @@ pub fn deinitDeserializedType(deserialized: anytype, allocator: std.mem.Allocato
         },
         .@"struct" => |t| inline for (t.fields) |field| {
             deinitDeserializedType(@field(deserialized, field.name), allocator);
+        },
+        .@"union" => {
+            if (typeInfoT.@"union".tag_type == null) @compileError("Union with no tag type not supported");
+            switch (deserialized) {
+                inline else => |e| deinitDeserializedType(e, allocator),
+            }
         },
         else => {},
     }
@@ -165,6 +193,44 @@ test "deserialize/serialize more complex" {
         var deserialize_buffer = std.io.fixedBufferStream(&expected_bytes_big_endian);
 
         const read_data = try deserialize(Data, std.testing.allocator, deserialize_buffer.reader(), .big);
+        defer deinitDeserializedType(read_data, std.testing.allocator);
+        try std.testing.expectEqualDeep(data, read_data);
+    }
+}
+
+test "deserialize/serialize tagged union" {
+    var buffer: [5]u8 = undefined;
+    var stream = std.io.fixedBufferStream(&buffer);
+    const Union = union(enum(u8)) {
+        field_1: *u32,
+        field_2: *u32,
+    };
+    const data = Union{
+        .field_1 = try std.testing.allocator.create(u32),
+    };
+    data.field_1.* = 257;
+    defer std.testing.allocator.destroy(data.field_1);
+
+    {
+        try serialize(data, stream.writer(), .little);
+        const expected_bytes_little_endian = [5]u8{ 0, 1, 1, 0, 0 };
+        try std.testing.expectEqual(expected_bytes_little_endian, buffer);
+        var deserialize_buffer = std.io.fixedBufferStream(&expected_bytes_little_endian);
+
+        const read_data = try deserialize(Union, std.testing.allocator, deserialize_buffer.reader(), .little);
+        defer deinitDeserializedType(read_data, std.testing.allocator);
+        try std.testing.expectEqualDeep(data, read_data);
+    }
+
+    stream.reset();
+
+    {
+        try serialize(data, stream.writer(), .big);
+        const expected_bytes_little_endian = [5]u8{ 0, 0, 0, 1, 1 };
+        try std.testing.expectEqual(expected_bytes_little_endian, buffer);
+        var deserialize_buffer = std.io.fixedBufferStream(&expected_bytes_little_endian);
+
+        const read_data = try deserialize(Union, std.testing.allocator, deserialize_buffer.reader(), .big);
         defer deinitDeserializedType(read_data, std.testing.allocator);
         try std.testing.expectEqualDeep(data, read_data);
     }

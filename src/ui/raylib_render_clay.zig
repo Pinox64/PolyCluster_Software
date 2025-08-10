@@ -241,5 +241,5 @@ pub fn measureText(clay_text: []const u8, config: *cl.TextElementConfig, _: void
 
 pub fn loadFont(file_data: ?[]const u8, font_id: u16, font_size: i32) !void {
     raylib_fonts[font_id] = try rl.loadFontFromMemory(".ttf", file_data, font_size * 2, null);
-    // rl.setTextureFilter(raylib_fonts[font_id].?.texture, .bilinear);
+    rl.setTextureFilter(raylib_fonts[font_id].?.texture, .bilinear);
 }

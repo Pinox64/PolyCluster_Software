@@ -1,22 +1,23 @@
 const std = @import("std");
 const clay = @import("zclay");
 const rl = @import("raylib");
-const renderer = @import("raylib_render_clay.zig");
 const common = @import("PClusterCommon");
+const protocol = common.protocol;
 const PClusterConfig = common.PClusterConfig;
+const layout = @import("layout.zig");
+const renderer = @import("raylib_render_clay.zig");
 
-var config: PClusterConfig = .default;
-const dark_gray: clay.Color = .{ 0x21, 0x21, 0x21, 255 };
-const light_grey: clay.Color = .{ 224, 215, 210, 255 };
-const red: clay.Color = .{ 168, 66, 28, 255 };
-const orange: clay.Color = .{ 225, 138, 50, 255 };
-const white: clay.Color = .{ 250, 250, 255, 255 };
-const black: clay.Color = .{ 0, 0, 0, 255 };
+var pcluster_config = common.Mutexed(PClusterConfig).init(.default);
+var driver_connected = common.Mutexed(bool).init(false);
+var pcluster_connected = common.Mutexed(bool).init(false);
 
 pub fn main() !void {
-    var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
+    var debug_allocator: std.heap.DebugAllocator(.{ .thread_safe = true }) = .init;
     defer _ = debug_allocator.deinit();
     const allocator = debug_allocator.allocator();
+
+    var driver_connection_thread = try std.Thread.spawn(.{}, connectionWithDriverTask, .{allocator});
+    defer driver_connection_thread.detach();
 
     const clay_memory = try allocator.alloc(u8, clay.minMemorySize());
     defer allocator.free(clay_memory);
@@ -25,14 +26,15 @@ pub fn main() !void {
     _ = clay.initialize(clay_arena, .{ .w = 1280, .h = 720 }, .{});
     clay.setMeasureTextFunction(void, {}, renderer.measureText);
 
-    try renderer.loadFont(@embedFile("fonts/RobotoMono-Medium.ttf"), 0, 24);
-
     rl.setConfigFlags(.{
         .msaa_4x_hint = true,
+        .window_resizable = true,
     });
     rl.initWindow(1280, 720, "PCluster controll software");
     defer rl.closeWindow();
-    rl.setTargetFPS(60);
+    rl.setTargetFPS(20);
+
+    try renderer.loadFont(@embedFile("fonts/RobotoMono-Medium.ttf"), 0, 24);
 
     while (!rl.windowShouldClose()) {
         if (rl.isKeyPressed(.escape)) break;
@@ -44,42 +46,31 @@ pub fn main() !void {
             .y = mouse_position.y,
         }, rl.isMouseButtonDown(.left));
 
-        // clay.setLayoutDimensions(.{
-        //     .w = @floatFromInt(rl.getScreenWidth()),
-        //     .h = @floatFromInt(rl.getScreenHeight()),
-        // });
+        const scroll_delta = rl.getMouseWheelMoveV().multiply(.{ .x = 6, .y = 6 });
+        clay.updateScrollContainers(
+            false,
+            .{ .x = scroll_delta.x, .y = scroll_delta.y },
+            rl.getFrameTime(),
+        );
+
+        clay.setLayoutDimensions(.{
+            .w = @floatFromInt(rl.getScreenWidth()),
+            .h = @floatFromInt(rl.getScreenHeight()),
+        });
 
         var timer = try std.time.Timer.start();
+        const layout_state = layout.State{
+            .driver_connected = driver_connected.get(),
+            .pcluster_connected = pcluster_connected.get(),
+            .config = pcluster_config.get(),
+        };
+
         clay.beginLayout();
-        clay.UI()(clay.ElementDeclaration{
-            .id = .ID("Background"),
-            .background_color = dark_gray,
-            .layout = .{
-                .sizing = .{ .h = .grow, .w = .grow },
-                .padding = .all(16),
-                .child_alignment = .{
-                    .x = .center,
-                    .y = .center,
-                },
-            },
-        })({
-            clay.UI()(clay.ElementDeclaration{
-                .id = .ID("Clusters"),
-                .layout = .{
-                    .child_gap = 8,
-                    .padding = .all(8),
-                },
-                .corner_radius = .all(8),
-                .background_color = .{ 0, 0, 0, 40 },
-            })({
-                for (0..4) |i| {
-                    layoutDial(@intCast(i));
-                }
-            });
-        });
+        layout.layout(layout_state);
         var render_commands = clay.endLayout();
         const ns = timer.lap();
-        std.debug.print("clay layout time: {d}us\n", .{ns / std.time.ns_per_us});
+        _ = ns;
+        // std.debug.print("clay layout time: {d}us\n", .{ns / std.time.ns_per_us});
 
         rl.beginDrawing();
         try renderer.clayRaylibRender(&render_commands, allocator);
@@ -87,131 +78,31 @@ pub fn main() !void {
     }
 }
 
-pub fn layoutDial(index: u32) void {
-    const width = 200;
-    const height = 200;
+pub fn connectionWithDriverTask(allocator: std.mem.Allocator) void {
+    while (true) {
+        defer std.Thread.sleep(std.time.ns_per_ms * 100);
 
-    clay.UI()(clay.ElementDeclaration{
-        .id = .IDI("Dial", @intCast(index)),
-        .layout = .{
-            .sizing = .{ .h = .fixed(width), .w = .fixed(height) },
-            .direction = .top_to_bottom,
-            .child_alignment = .{
-                .x = .center,
-            },
-            .child_gap = 8,
-            .padding = .all(8),
-        },
-        .corner_radius = .all(16),
-        .background_color = black,
-    })({
-        // Numbers
-        clay.UI()(clay.ElementDeclaration{
-            .layout = .{
-                .sizing = .{
-                    .w = .fixed(180),
-                    .h = .fixed(180),
-                },
-                .child_alignment = .{
-                    .x = .center,
-                    .y = .center,
-                },
-            },
-            .corner_radius = .all(90),
-            .border = .{
-                .color = pclusterConfigColorToClayColor(config.dial.color, 255),
-                .width = .all(3),
-            },
-            .background_color = .{ 50, 50, 50, 50 },
-        })({
-            // Black button over needle
-            clay.UI()(clay.ElementDeclaration{
-                .floating = .{
-                    .zIndex = 1,
-                    .attach_to = .to_parent,
-                    .attach_points = .{
-                        .parent = .center_center,
-                        .element = .center_center,
-                    },
-                },
-                .layout = .{
-                    .sizing = .{
-                        .w = .fixed(40),
-                        .h = .fixed(40),
-                    },
-                },
-                .corner_radius = .all(20),
-                .background_color = black,
-            })({});
+        const conn = std.net.tcpConnectToHost(allocator, "127.0.0.1", protocol.default_port) catch continue;
+        defer conn.close();
 
-            // Needle
-            clay.UI()(clay.ElementDeclaration{
-                .floating = .{
-                    .attach_points = .{ .element = .center_center, .parent = .center_center },
-                    .attach_to = .to_parent,
-                    .offset = .{
-                        .x = -32,
-                        .y = 0,
-                    },
-                },
-                .layout = .{
-                    .sizing = .{
-                        .h = .fixed(6),
-                        .w = .fixed(70),
-                    },
-                },
-                .background_color = pclusterConfigColorToClayColor(config.needle.color, 255),
-            })({});
-        });
+        const writer = conn.writer();
+        const reader = conn.reader();
 
-        // Oled display
-        const oled_border_radius = 2;
-        clay.UI()(clay.ElementDeclaration{
-            .floating = .{
-                .attach_to = .to_parent,
-                .offset = .{
-                    .x = (width - 128) / 2 + oled_border_radius,
-                    .y = height - 40 + oled_border_radius,
-                },
-            },
-            .border = .{
-                .width = .all(oled_border_radius),
-                .color = white,
-            },
-            .layout = .{
-                .sizing = .{
-                    .w = .fixed(128),
-                    .h = .fixed(32),
-                },
-                .child_alignment = .{
-                    .y = .center,
-                    .x = .center,
-                },
-            },
-            .background_color = .{ 15, 15, 15, 255 },
-        })({
-            const text = switch (config.displays[index]) {
-                .off => "",
-                .cpu_usage => "CPU %",
-                .cpu_temperature => "CPU Temp",
-                .mem_usage => "MEM %",
-                .gpu_usage => "GPU %",
-                .gpu_temperature => "GPU Temp",
-                else => {
-                    std.log.err("Unsupported display information\n", .{});
-                    std.process.exit(1);
-                },
+        driver_connected.set(true);
+        defer driver_connected.set(false);
+
+        // TODO: State machine to handle logic
+        while (true) {
+            const out_packet = protocol.DriverBoundPacket{
+                .request_protocol_version = {},
             };
+            out_packet.write(writer) catch break;
 
-            clay.text(text, .{
-                .color = white,
-                .font_size = 24,
-                .alignement = .center,
-            });
-        });
-    });
-}
+            const in_packet = protocol.ControllerBoundPacket.read(allocator, reader) catch break;
+            defer in_packet.deinit(allocator);
+            std.debug.assert(in_packet == .request_protocol_version_response);
 
-pub fn pclusterConfigColorToClayColor(color: PClusterConfig.Color, opacity: f32) clay.Color {
-    return .{ @floatFromInt(color.r), @floatFromInt(color.g), @floatFromInt(color.b), opacity };
+            std.Thread.sleep(std.time.ns_per_s * 10000);
+        }
+    }
 }

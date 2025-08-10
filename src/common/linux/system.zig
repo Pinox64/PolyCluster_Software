@@ -1,4 +1,5 @@
 const std = @import("std");
+const PClusterConfig = @import("../PClusterConfig.zig");
 // TODO: Change this API's name
 
 pub fn getAverageCpuUsagePercent() !f64 {
@@ -115,4 +116,42 @@ pub fn getTemperatureCelsius(zone: []const u8) !f64 {
     // TODO: proper error management
     std.log.err("zone not found.", .{});
     return 0;
+}
+
+pub fn getConfigFile(envmap: std.process.EnvMap) !std.fs.File {
+    var config_home = blk: {
+        if (envmap.get("XDG_CONFIG_HOME")) |config_home_path| {
+            break :blk try std.fs.openDirAbsolute(config_home_path, .{});
+        } else if (envmap.get("HOME")) |home_path| {
+            var home = try std.fs.openDirAbsolute(home_path, .{});
+            defer home.close();
+
+            home.makeDir(".config") catch |e| {
+                if (e != error.PathAlreadyExists) return e;
+            };
+
+            break :blk try home.openDir(".config", .{});
+        } else return error.NoHomeEnvironmentVariable;
+    };
+    defer config_home.close();
+
+    config_home.makeDir("PCluster") catch |e| {
+        if (e != std.posix.MakeDirError.PathAlreadyExists) return e;
+    };
+    var pcluster_dir = try config_home.openDir("PCluster", .{});
+    defer pcluster_dir.close();
+
+    if (pcluster_dir.openFile("PCluster.zon", .{ .mode = .read_write })) |file| {
+        return file;
+    } else |e| {
+        if (e != error.FileNotFound) return e;
+    }
+
+    const file = try pcluster_dir.createFile("PCluster.zon", .{ .read = true });
+    var buffered_writer = std.io.bufferedWriter(file.writer());
+    try PClusterConfig.default.saveToWriter(buffered_writer.writer());
+    try buffered_writer.flush();
+
+    try file.seekTo(0);
+    return file;
 }
