@@ -18,8 +18,8 @@ pub fn main() !void {
     defer _ = debug_allocator.deinit();
     const allocator = debug_allocator.allocator();
 
-    var driver_connection_thread = try std.Thread.spawn(.{}, connectionWithDriverTask, .{allocator});
-    defer driver_connection_thread.detach();
+    var driver_connection_thread = try std.Thread.spawn(.{}, connectionWithDriverTask, .{});
+    driver_connection_thread.detach();
 
     const clay_memory = try allocator.alloc(u8, clay.minMemorySize());
     defer allocator.free(clay_memory);
@@ -82,7 +82,11 @@ pub fn main() !void {
 
 var out_packet_queue = common.ThreadSafeQueue(protocol.DriverBoundPacket, 64).init;
 
-pub fn connectionWithDriverTask(allocator: Allocator) void {
+pub fn connectionWithDriverTask() void {
+    var debug_allocator: std.heap.DebugAllocator(.{ .thread_safe = true }) = .init;
+    defer _ = debug_allocator.deinit();
+    const allocator = debug_allocator.allocator();
+
     while (true) {
         connectWithDriver(allocator) catch continue;
         std.Thread.sleep(std.time.ns_per_ms * 100);
@@ -94,7 +98,10 @@ pub fn connectWithDriver(allocator: Allocator) !void {
     defer conn.close();
 
     driver_connected.set(true);
-    defer driver_connected.set(false);
+    defer {
+        driver_connected.set(false);
+        pcluster_connected.set(false);
+    }
 
     out_packet_queue = .init;
     try out_packet_queue.writeItem(.{ .request_protocol_version = {} });
@@ -126,16 +133,13 @@ pub fn driverReadLoop(allocator: Allocator, reader: anytype) void {
         defer in_packet.deinit(allocator);
 
         switch (in_packet) {
+            .disconnect => return,
+            .set_pcluster_plugged => |p| pcluster_connected.set(p),
+            .request_system_information_response => |p| system_information.set(p),
             .request_protocol_version_response => |p| {
                 if (protocol.version.eql(p) == false) {
                     out_packet_queue.writeItem(.{ .disconnect = {} }) catch return;
                 }
-            },
-            .request_system_information_response => |p| {
-                system_information.set(p);
-            },
-            .set_pcluster_plugged => |p| {
-                pcluster_connected.set(p);
             },
         }
     }

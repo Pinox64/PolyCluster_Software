@@ -9,6 +9,7 @@ const Error = error{
 };
 
 handle: std.fs.File,
+connected: bool = false,
 config: PClusterConfig,
 
 pub fn init(config: PClusterConfig) !PCluster {

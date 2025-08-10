@@ -33,6 +33,7 @@ pub const ControllerBoundPacket = union(enum(u8)) {
     request_protocol_version_response: Version,
     request_system_information_response: SystemInformation,
     set_pcluster_plugged: bool,
+    disconnect: void,
 
     const methods = PacketMethods(@This());
     pub const write = methods.write;

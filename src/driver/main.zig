@@ -38,31 +38,47 @@ pub fn main() !void {
         pcluster.release();
     }
 
-    const config_listener_thread = try std.Thread.spawn(.{}, configUpdaterTask, .{allocator});
-    defer config_listener_thread.detach();
+    const controller_connect_thread = try std.Thread.spawn(.{}, connectToControllerTask, .{});
+    controller_connect_thread.detach();
 
+    try out_packet_queue.writeItem(.{ .set_pcluster_plugged = false });
     while (true) {
-        driverLoop() catch |e| {
-            std.log.err("Error while executing the driver loop: {s}. Retrying in 2 seconds", .{@errorName(e)});
-            std.Thread.sleep(std.time.ns_per_s * 2);
+        writeReportToPClusterLoop() catch |e| {
+            try out_packet_queue.writeItem(.{ .set_pcluster_plugged = false });
+            const seconds_to_wait = 2;
+            std.log.err("Error while executing the driver loop: {s}. Retrying in {d} seconds", .{ @errorName(e), seconds_to_wait });
+            std.Thread.sleep(std.time.ns_per_s * seconds_to_wait);
         };
     }
 }
 
-pub fn driverLoop() !void {
+pub fn writeReportToPClusterLoop() !void {
     pcluster = .init(try .init(.default));
+    try out_packet_queue.writeItem(.{ .set_pcluster_plugged = true });
+    pcluster.acquire().connected = true;
+    pcluster.release();
+    defer {
+        out_packet_queue.writeItem(.{ .set_pcluster_plugged = false }) catch {};
+        pcluster.acquire().connected = false;
+        pcluster.release();
+    }
 
     while (true) {
         try sys_info.updateAll();
-        for (0..20) |_| {
+        for (0..pcluster.get().config.update_period_ms / 20) |_| {
             try pcluster.get().writeReport(sys_info);
-            std.Thread.sleep(std.time.ns_per_ms * 10);
+            std.Thread.sleep(std.time.ns_per_ms * 20);
         }
-        std.Thread.sleep(std.time.ns_per_ms * pcluster.get().config.update_period_ms);
     }
 }
 
-pub fn configUpdaterTask(allocator: Allocator) !void {
+var out_packet_queue = common.ThreadSafeQueue(protocol.ControllerBoundPacket, 64).init;
+
+pub fn connectToControllerTask() !void {
+    var debug_allocator: std.heap.DebugAllocator(.{ .thread_safe = true }) = .init;
+    defer _ = debug_allocator.deinit();
+    const allocator = debug_allocator.allocator();
+
     const localhost = comptime std.net.Address.parseIp("127.0.0.1", protocol.default_port) catch unreachable;
     var server = localhost.listen(.{ .reuse_port = true, .reuse_address = true, .kernel_backlog = 1 }) catch |e| {
         std.log.err("Error while starting server: {}, exiting...\n", .{e});
@@ -73,23 +89,27 @@ pub fn configUpdaterTask(allocator: Allocator) !void {
         const client = try server.accept();
         defer client.stream.close();
 
-        configUpdaterLoop(allocator, client) catch |e| {
+        out_packet_queue = .init;
+        try out_packet_queue.writeItem(.{ .set_pcluster_plugged = pcluster.get().connected });
+        const writer_thread = try std.Thread.spawn(.{}, controllerWriteLoop, .{client.stream.writer()});
+        defer {
+            out_packet_queue.writeItem(.{ .disconnect = {} }) catch {};
+            writer_thread.join();
+        }
+
+        controllerReadLoop(allocator, client) catch |e| {
             std.log.err("Error while listening configurations from {}: {s}.", .{ client.address, @errorName(e) });
         };
     }
 }
 
-fn configUpdaterLoop(allocator: Allocator, client: std.net.Server.Connection) !void {
-    var buffered_writer = std.io.bufferedWriter(client.stream.writer());
+fn controllerReadLoop(allocator: Allocator, client: std.net.Server.Connection) !void {
     var buffered_reader = std.io.bufferedReader(client.stream.reader());
-    const writer = buffered_writer.writer();
     const reader = buffered_reader.reader();
 
     while (true) {
         const in_packet = try protocol.DriverBoundPacket.read(allocator, reader);
         defer in_packet.deinit(allocator);
-
-        var out_packet: protocol.ControllerBoundPacket = undefined;
 
         switch (in_packet) {
             .disconnect => return,
@@ -97,16 +117,22 @@ fn configUpdaterLoop(allocator: Allocator, client: std.net.Server.Connection) !v
                 pcluster.acquire().config = config;
                 pcluster.release();
             },
-            .request_protocol_version => {
-                out_packet = .{ .request_protocol_version_response = protocol.version };
-                try out_packet.write(writer);
-            },
-            .request_system_information => {
-                out_packet = .{ .request_system_information_response = sys_info };
-                try out_packet.write(writer);
-            },
+            .request_protocol_version => try out_packet_queue.writeItem(.{ .request_protocol_version_response = protocol.version }),
+            .request_system_information => try out_packet_queue.writeItem(.{ .request_system_information_response = sys_info }),
         }
+    }
+}
 
-        try buffered_writer.flush();
+pub fn controllerWriteLoop(unbuffered_writer: anytype) void {
+    var buffered_writer = std.io.bufferedWriter(unbuffered_writer);
+    const writer = buffered_writer.writer();
+    while (true) {
+        const packet = out_packet_queue.readItem();
+
+        packet.write(writer) catch return;
+        buffered_writer.flush() catch return;
+
+        // Used to end the thread
+        if (packet == .disconnect) return;
     }
 }
