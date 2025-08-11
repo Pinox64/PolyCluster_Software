@@ -13,7 +13,10 @@ const PCluster = switch (@import("builtin").os.tag) {
     else => @compileError("Not implemented"),
 };
 
-var pcluster: Mutexed(PCluster) = undefined;
+var pcluster: Mutexed(PCluster) = .init(PCluster{
+    .handle = undefined,
+    .config = .default,
+});
 var sys_info: SystemInformation = .init;
 
 pub fn main() !void {
@@ -54,10 +57,13 @@ pub fn main() !void {
 }
 
 pub fn writeReportToPClusterLoop() !void {
-    pcluster = .init(try .init(.default));
-    try out_packet_queue.writeItem(.{ .set_pcluster_plugged = true });
-    pcluster.acquire().connected = true;
-    pcluster.release();
+    {
+        const pcluster_ptr = pcluster.acquire();
+        defer pcluster.release();
+        pcluster_ptr.handle = try PCluster.openWithHIDRaw();
+        pcluster_ptr.connected = true;
+        try out_packet_queue.writeItem(.{ .set_pcluster_plugged = true });
+    }
     defer {
         out_packet_queue.writeItem(.{ .set_pcluster_plugged = false }) catch {};
         pcluster.acquire().connected = false;
