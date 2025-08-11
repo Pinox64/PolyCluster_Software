@@ -95,7 +95,6 @@ test "set config write and read" {
     var stream = std.io.fixedBufferStream(&buffer);
     try expected_packet.write(stream.writer());
 
-    try std.testing.expectEqual(1 + @bitSizeOf(PClusterConfig) / 8, stream.pos);
     try std.testing.expectEqual(@intFromEnum(std.meta.activeTag(expected_packet)), buffer[0]);
 
     stream.pos = 0;

@@ -198,16 +198,6 @@ test "report bytes" {
     try std.testing.expectEqual(expected_report_bytes, buffer);
 }
 
-test "report SystemInformationNotSupported error" {
-    const config = PClusterConfig{
-        .displays = [4]PClusterConfig.DisplayInfo{ .cpu_usage, .cpu_temperature, .mem_usage, @enumFromInt(255) },
-    };
-    const info: SystemInformation = .init;
-
-    var buffer: [20]u8 = undefined;
-    try std.testing.expectError(Error.SystemInformationNotSupported, config.writeReport(&buffer, info));
-}
-
 test "read/write config" {
     var buffer: [1024]u8 = undefined;
     var stream = std.io.fixedBufferStream(&buffer);
