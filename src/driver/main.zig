@@ -25,9 +25,10 @@ pub fn main() !void {
     defer envmap.deinit();
 
     {
-        const file = try common.system.getConfigFile(envmap);
-        defer file.close();
-        pcluster.acquire().config = PClusterConfig.loadFromReader(allocator, file.reader()) catch |err| blk: {
+        const config_path = try common.system.getConfigFilePath(allocator, envmap);
+        defer allocator.free(config_path);
+
+        pcluster.acquire().config = PClusterConfig.loadFromPath(config_path) catch |err| blk: {
             if (err != error.ParseZon) {
                 return err;
             }

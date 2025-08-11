@@ -22,10 +22,17 @@ pub fn main() !void {
     var envmap = try std.process.getEnvMap(allocator);
     defer envmap.deinit();
 
+    const config_path = try common.system.getConfigFilePath(allocator, envmap);
+    defer allocator.free(config_path);
     {
-        var pcluster_config_file = try common.system.getConfigFile(envmap);
-        const read_config = PClusterConfig.loadFromReader(allocator, pcluster_config_file.reader()) catch PClusterConfig.default;
-        pcluster_config_file.close();
+        const read_config = PClusterConfig.loadFromPath(config_path) catch |err| blk: {
+            if (err != error.ParseZon) {
+                return err;
+            }
+
+            std.log.err("Parsing the config file failed... Using default config", .{});
+            break :blk PClusterConfig.default;
+        };
         pcluster_config.set(read_config);
 
         var driver_connection_thread = try std.Thread.spawn(.{}, connectionWithDriverTask, .{});
@@ -89,7 +96,7 @@ pub fn main() !void {
         const new_config = pcluster_config.get();
         if (std.meta.eql(new_config, old_config) == false) {
             try out_packet_queue.writeItem(.{ .set_config = new_config });
-            var pcluster_config_file = try common.system.getConfigFile(envmap);
+            var pcluster_config_file = try std.fs.createFileAbsolute(config_path, .{});
             try pcluster_config.get().saveToWriter(pcluster_config_file.writer());
             pcluster_config_file.close();
         }

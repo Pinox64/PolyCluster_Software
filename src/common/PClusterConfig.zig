@@ -57,12 +57,39 @@ pub const default = PClusterConfig{
     .needle = .{ .brightness = 100, .color = .{ .r = 0, .g = 255, .b = 0 } },
 };
 
+fn ensureConfigFileExists(path: []const u8) !void {
+    const dirname = std.fs.path.dirname(path) orelse return error.NotAFilePath;
+    var deepest_dir = try std.fs.cwd().makeOpenPath(dirname, .{});
+    defer deepest_dir.close();
+
+    var config_file = deepest_dir.openFile(path, .{ .mode = .write_only }) catch blk: {
+        std.debug.print("file not found!\n", .{});
+        const file = try deepest_dir.createFile(path, .{});
+        try default.saveToWriter(file.writer());
+        break :blk file;
+    };
+    defer config_file.close();
+}
+
+pub fn loadFromPath(path: []const u8) !PClusterConfig {
+    try ensureConfigFileExists(path);
+
+    const file = try std.fs.cwd().openFile(path, .{ .mode = .read_only });
+    defer file.close();
+
+    var buffer: [8192]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+
+    return try loadFromReader(fba.allocator(), file.reader());
+}
+
 pub fn loadFromReader(allocator: Allocator, reader: anytype) !PClusterConfig {
     var bytes = std.ArrayList(u8).init(allocator);
     defer bytes.deinit();
 
     try reader.readAllArrayList(&bytes, 8192);
-    const null_terminated_bytes: [:0]u8 = @ptrCast(bytes.items);
+    try bytes.append(0);
+    const null_terminated_bytes: [:0]u8 = bytes.items[0 .. bytes.items.len - 1 :0];
 
     var status = std.zon.parse.Status{};
     defer status.deinit(allocator);
@@ -77,6 +104,18 @@ pub fn loadFromReader(allocator: Allocator, reader: anytype) !PClusterConfig {
 
 pub fn saveToWriter(pcluster_config: PClusterConfig, writer: anytype) !void {
     return std.zon.stringify.serialize(pcluster_config, .{}, writer);
+}
+
+pub fn saveToPath(path: []const u8) !PClusterConfig {
+    ensureConfigFileExists(path);
+
+    const file = try std.fs.cwd().openFile(path, .{ .mode = .read_only });
+    defer file.close();
+
+    var buffer: [1024]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+
+    return try loadFromReader(fba.allocator(), file.reader());
 }
 
 pub fn writeReport(pcluster_config: *const PClusterConfig, buffer: *[20]u8, info: SystemInformation) !void {
@@ -94,7 +133,10 @@ pub fn writeReport(pcluster_config: *const PClusterConfig, buffer: *[20]u8, info
             .cpu_usage => @intFromFloat(@round(info.cpu_usage_percent)),
             .cpu_temperature => @intFromFloat(@round(info.cpu_temperature_celsius)),
             .mem_usage => @intFromFloat(@round(info.memory_usage_percent)),
-            else => return Error.SystemInformationNotSupported,
+            inline else => |not_supported| blk: {
+                std.log.err("SystemInformation not supported: {s}\n", .{@tagName(not_supported)});
+                break :blk 0;
+            },
         };
         writer.writeByte(byte) catch unreachable;
     }
