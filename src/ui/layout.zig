@@ -3,6 +3,12 @@ const clay = @import("zclay");
 const common = @import("PClusterCommon");
 const PClusterConfig = common.PClusterConfig;
 
+const global = @import("global.zig");
+const pcluster_config = &global.pcluster_config;
+const driver_connected = &global.driver_connected;
+const pcluster_connected = &global.pcluster_connected;
+const system_information = &global.system_information;
+
 const light_grey: clay.Color = .{ 224, 215, 210, 255 };
 const red: clay.Color = .{ 168, 66, 28, 255 };
 const green: clay.Color = .{ 66, 168, 28, 255 };
@@ -12,10 +18,7 @@ const black = colorFromHexString("000000") catch unreachable;
 const background_color = colorFromHexString("121212") catch unreachable;
 
 const State = struct {
-    driver_connected: bool = false,
-    pcluster_connected: bool = false,
     dial_dropdowns: [4]bool = @splat(false),
-    config: PClusterConfig = .default,
 };
 
 pub var state = State{};
@@ -80,7 +83,7 @@ pub fn layout() void {
                             .h = .fixed(14),
                         },
                     },
-                    .background_color = if (state.driver_connected) green else red,
+                    .background_color = if (driver_connected.get()) green else red,
                     .corner_radius = .all(7),
                 })({});
                 clay.text("Driver", .{
@@ -103,7 +106,7 @@ pub fn layout() void {
                             .h = .fixed(14),
                         },
                     },
-                    .background_color = if (state.pcluster_connected) green else red,
+                    .background_color = if (pcluster_connected.get()) green else red,
                     .corner_radius = .all(7),
                 })({});
                 clay.text("PCluster", .{
@@ -146,7 +149,7 @@ pub fn layoutDial(index: u32) void {
             },
             .corner_radius = .all(90),
             .border = .{
-                .color = pclusterConfigColorToClayColor(state.config.dial.color, 255),
+                .color = pclusterConfigColorToClayColor(pcluster_config.get().dial.color, 255),
                 .width = .all(3),
             },
             .background_color = .{ 50, 50, 50, 50 },
@@ -187,7 +190,7 @@ pub fn layoutDial(index: u32) void {
                         .w = .fixed(70),
                     },
                 },
-                .background_color = pclusterConfigColorToClayColor(state.config.needle.color, 255),
+                .background_color = pclusterConfigColorToClayColor(pcluster_config.get().needle.color, 255),
             })({});
         });
 
@@ -217,7 +220,20 @@ pub fn layoutDial(index: u32) void {
             },
             .background_color = black,
         })({
-            const text = switch (state.config.displays[index]) {
+            const onHoverFn = (struct {
+                pub fn onHoverFn(element_id: clay.ElementId, pointer_data: clay.PointerData, dial_index: usize) void {
+                    std.debug.assert(dial_index < 4);
+                    _ = element_id;
+                    if (pointer_data.state != .pressed_this_frame) return;
+                    const config = pcluster_config.acquire();
+                    defer pcluster_config.release();
+                    config.displays[dial_index] = config.displays[dial_index].next();
+                }
+            }).onHoverFn;
+
+            clay.onHover(usize, index, onHoverFn);
+
+            const text = switch (pcluster_config.get().displays[index]) {
                 .off => "",
                 .cpu_usage => "CPU %",
                 .cpu_temperature => "CPU Temp",

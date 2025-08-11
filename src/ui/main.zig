@@ -8,10 +8,11 @@ const PClusterConfig = common.PClusterConfig;
 const layout = @import("layout.zig");
 const renderer = @import("raylib_render_clay.zig");
 
-var pcluster_config = common.Mutexed(PClusterConfig).init(.default);
-var driver_connected = common.Mutexed(bool).init(false);
-var pcluster_connected = common.Mutexed(bool).init(false);
-var system_information = common.Mutexed(common.SystemInformation).init(.init);
+const global = @import("global.zig");
+const pcluster_config = &global.pcluster_config;
+const driver_connected = &global.driver_connected;
+const pcluster_connected = &global.pcluster_connected;
+const system_information = &global.system_information;
 
 pub fn main() !void {
     var debug_allocator: std.heap.DebugAllocator(.{ .thread_safe = true }) = .init;
@@ -21,14 +22,16 @@ pub fn main() !void {
     var envmap = try std.process.getEnvMap(allocator);
     defer envmap.deinit();
 
-    var pcluster_config_file = try common.system.getConfigFile(envmap);
-    const read_config = PClusterConfig.loadFromReader(allocator, pcluster_config_file.reader()) catch PClusterConfig.default;
-    pcluster_config_file.close();
-    pcluster_config.set(read_config);
+    {
+        var pcluster_config_file = try common.system.getConfigFile(envmap);
+        const read_config = PClusterConfig.loadFromReader(allocator, pcluster_config_file.reader()) catch PClusterConfig.default;
+        pcluster_config_file.close();
+        pcluster_config.set(read_config);
 
-    var driver_connection_thread = try std.Thread.spawn(.{}, connectionWithDriverTask, .{});
-    driver_connection_thread.detach();
-    try out_packet_queue.writeItem(.{ .set_config = read_config });
+        var driver_connection_thread = try std.Thread.spawn(.{}, connectionWithDriverTask, .{});
+        driver_connection_thread.detach();
+        try out_packet_queue.writeItem(.{ .set_config = read_config });
+    }
 
     const clay_memory = try allocator.alloc(u8, clay.minMemorySize());
     defer allocator.free(clay_memory);
@@ -47,6 +50,7 @@ pub fn main() !void {
 
     try renderer.loadFont(@embedFile("fonts/RobotoMono-Medium.ttf"), 0, 24);
 
+    var old_config = pcluster_config.get();
     while (!rl.windowShouldClose()) {
         if (rl.isKeyPressed(.escape)) break;
         if (rl.isKeyPressed(.d)) clay.setDebugModeEnabled(!clay.isDebugModeEnabled());
@@ -70,9 +74,6 @@ pub fn main() !void {
         });
 
         var timer = try std.time.Timer.start();
-        layout.state.driver_connected = driver_connected.get();
-        layout.state.pcluster_connected = pcluster_connected.get();
-        layout.state.config = pcluster_config.get();
 
         clay.beginLayout();
         layout.layout();
@@ -84,6 +85,15 @@ pub fn main() !void {
         rl.beginDrawing();
         try renderer.clayRaylibRender(&render_commands, allocator);
         rl.endDrawing();
+
+        const new_config = pcluster_config.get();
+        if (std.meta.eql(new_config, old_config) == false) {
+            try out_packet_queue.writeItem(.{ .set_config = new_config });
+            var pcluster_config_file = try common.system.getConfigFile(envmap);
+            try pcluster_config.get().saveToWriter(pcluster_config_file.writer());
+            pcluster_config_file.close();
+        }
+        old_config = pcluster_config.get();
     }
 }
 

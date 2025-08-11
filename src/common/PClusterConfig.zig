@@ -21,6 +21,13 @@ pub const DisplayInfo = enum(u8) {
     mem_usage = 3,
     gpu_usage = 4,
     gpu_temperature = 5,
+
+    pub fn next(info: DisplayInfo) DisplayInfo {
+        var val: u8 = @intFromEnum(info);
+        val += 1;
+        if (val > @intFromEnum(DisplayInfo.gpu_temperature)) val = 0;
+        return @enumFromInt(val);
+    }
 };
 
 pub const LEDMode = enum(u8) {
