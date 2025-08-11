@@ -2,6 +2,7 @@ const std = @import("std");
 const clay = @import("zclay");
 const common = @import("PClusterCommon");
 const PClusterConfig = common.PClusterConfig;
+const rl = @import("raylib");
 
 const global = @import("global.zig");
 const pcluster_config = &global.pcluster_config;
@@ -17,7 +18,10 @@ const white: clay.Color = .{ 250, 250, 255, 255 };
 const black = colorFromHexString("000000") catch unreachable;
 const background_color = colorFromHexString("121212") catch unreachable;
 
-const State = struct {};
+const State = struct {
+    scroll_delta: rl.Vector2 = undefined,
+    mouse_position: rl.Vector2 = undefined,
+};
 
 pub var state = State{};
 
@@ -66,51 +70,8 @@ pub fn layout() void {
                 .attach_to = .to_root,
             },
         })({
-            clay.UI()(clay.ElementDeclaration{
-                .layout = .{
-                    .child_alignment = .{
-                        .y = .center,
-                    },
-                    .child_gap = 8,
-                },
-            })({
-                clay.UI()(clay.ElementDeclaration{
-                    .layout = .{
-                        .sizing = .{
-                            .w = .fixed(14),
-                            .h = .fixed(14),
-                        },
-                    },
-                    .background_color = if (driver_connected.get()) green else red,
-                    .corner_radius = .all(7),
-                })({});
-                clay.text("Driver", .{
-                    .color = white,
-                });
-            });
-
-            clay.UI()(clay.ElementDeclaration{
-                .layout = .{
-                    .child_alignment = .{
-                        .y = .center,
-                    },
-                    .child_gap = 8,
-                },
-            })({
-                clay.UI()(clay.ElementDeclaration{
-                    .layout = .{
-                        .sizing = .{
-                            .w = .fixed(14),
-                            .h = .fixed(14),
-                        },
-                    },
-                    .background_color = if (pcluster_connected.get()) green else red,
-                    .corner_radius = .all(7),
-                })({});
-                clay.text("PCluster", .{
-                    .color = white,
-                });
-            });
+            layoutStatusDot("Driver", 14, if (driver_connected.get()) green else red);
+            layoutStatusDot("PCluster", 14, if (pcluster_connected.get()) green else red);
         });
     });
 }
@@ -249,6 +210,31 @@ pub fn layoutDial(index: u32) void {
                 .font_size = 32,
                 .alignement = .center,
             });
+        });
+    });
+}
+
+pub fn layoutStatusDot(text: []const u8, width: f32, color: clay.Color) void {
+    clay.UI()(clay.ElementDeclaration{
+        .layout = .{
+            .child_alignment = .{
+                .y = .center,
+            },
+            .child_gap = 8,
+        },
+    })({
+        clay.UI()(clay.ElementDeclaration{
+            .layout = .{
+                .sizing = .{
+                    .w = .fixed(width),
+                    .h = .fixed(width),
+                },
+            },
+            .background_color = color,
+            .corner_radius = .all(width / 2),
+        })({});
+        clay.text(text, .{
+            .color = white,
         });
     });
 }

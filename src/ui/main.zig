@@ -62,16 +62,16 @@ pub fn main() !void {
         if (rl.isKeyPressed(.escape)) break;
         if (rl.isKeyPressed(.d)) clay.setDebugModeEnabled(!clay.isDebugModeEnabled());
 
-        const mouse_position = rl.getMousePosition();
+        layout.state.mouse_position = rl.getMousePosition();
         clay.setPointerState(.{
-            .x = mouse_position.x,
-            .y = mouse_position.y,
+            .x = layout.state.mouse_position.x,
+            .y = layout.state.mouse_position.y,
         }, rl.isMouseButtonDown(.left));
 
-        const scroll_delta = rl.getMouseWheelMoveV().multiply(.{ .x = 6, .y = 6 });
+        layout.state.scroll_delta = rl.getMouseWheelMoveV().multiply(.{ .x = 6, .y = 6 });
         clay.updateScrollContainers(
             false,
-            .{ .x = scroll_delta.x, .y = scroll_delta.y },
+            .{ .x = layout.state.scroll_delta.x, .y = layout.state.scroll_delta.y },
             rl.getFrameTime(),
         );
 
