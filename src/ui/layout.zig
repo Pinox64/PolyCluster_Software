@@ -285,11 +285,11 @@ pub fn layoutColorChoosingWidget(text: []const u8, current_color: *PClusterConfi
     clay.UI()(clay.ElementDeclaration{
         .layout = .{
             .direction = .top_to_bottom,
-            .child_gap = 16,
+            .child_gap = 4,
             .padding = .all(4),
             .child_alignment = .{ .x = .center },
         },
-        .corner_radius = .all(4),
+        .corner_radius = .all(8),
         .background_color = shadow,
     })({
         clay.UI()(clay.ElementDeclaration{
