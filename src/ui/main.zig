@@ -37,7 +37,7 @@ pub fn main() !void {
 
         var driver_connection_thread = try std.Thread.spawn(.{}, connectionWithDriverTask, .{});
         driver_connection_thread.detach();
-        try out_packet_queue.writeItem(.{ .set_config = read_config });
+        out_packet_queue.writeItem(.{ .set_config = read_config });
     }
 
     const clay_memory = try allocator.alloc(u8, clay.minMemorySize());
@@ -95,7 +95,7 @@ pub fn main() !void {
 
         const new_config = pcluster_config.get();
         if (std.meta.eql(new_config, old_config) == false) {
-            try out_packet_queue.writeItem(.{ .set_config = new_config });
+            out_packet_queue.writeItem(.{ .set_config = new_config });
             var pcluster_config_file = try std.fs.createFileAbsolute(config_path, .{});
             try pcluster_config.get().saveToWriter(pcluster_config_file.writer());
             pcluster_config_file.close();
@@ -128,10 +128,10 @@ pub fn connectWithDriver(allocator: Allocator) !void {
     }
 
     out_packet_queue = .init;
-    try out_packet_queue.writeItem(.{ .request_protocol_version = {} });
+    out_packet_queue.writeItem(.{ .request_protocol_version = {} });
     const writer_thread = try std.Thread.spawn(.{}, driverWriteLoop, .{conn.writer()});
     defer {
-        out_packet_queue.writeItem(.{ .disconnect = {} }) catch {};
+        out_packet_queue.writeItem(.{ .disconnect = {} });
         writer_thread.join();
     }
     driverReadLoop(allocator, conn.reader());
@@ -162,12 +162,12 @@ pub fn driverReadLoop(allocator: Allocator, reader: anytype) void {
             .set_pcluster_plugged => |p| {
                 pcluster_connected.set(p);
                 if (p) {
-                    out_packet_queue.writeItem(.{ .set_config = pcluster_config.get() }) catch return;
+                    out_packet_queue.writeItem(.{ .set_config = pcluster_config.get() });
                 }
             },
             .request_protocol_version_response => |p| {
                 if (protocol.version.eql(p) == false) {
-                    out_packet_queue.writeItem(.{ .disconnect = {} }) catch return;
+                    out_packet_queue.writeItem(.{ .disconnect = {} });
                 }
             },
         }

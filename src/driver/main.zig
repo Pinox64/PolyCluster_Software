@@ -45,10 +45,10 @@ pub fn main() !void {
     const controller_connect_thread = try std.Thread.spawn(.{}, connectToControllerTask, .{});
     controller_connect_thread.detach();
 
-    try out_packet_queue.writeItem(.{ .set_pcluster_plugged = false });
+    out_packet_queue.writeItem(.{ .set_pcluster_plugged = false });
     while (true) {
         writeReportToPClusterLoop() catch |e| {
-            try out_packet_queue.writeItem(.{ .set_pcluster_plugged = false });
+            out_packet_queue.writeItem(.{ .set_pcluster_plugged = false });
             const seconds_to_wait = 2;
             std.log.err("Error while executing the driver loop: {s}. Retrying in {d} seconds", .{ @errorName(e), seconds_to_wait });
             std.Thread.sleep(std.time.ns_per_s * seconds_to_wait);
@@ -62,10 +62,10 @@ pub fn writeReportToPClusterLoop() !void {
         defer pcluster.release();
         pcluster_ptr.handle = try PCluster.openWithHIDRaw();
         pcluster_ptr.connected = true;
-        try out_packet_queue.writeItem(.{ .set_pcluster_plugged = true });
+        out_packet_queue.writeItem(.{ .set_pcluster_plugged = true });
     }
     defer {
-        out_packet_queue.writeItem(.{ .set_pcluster_plugged = false }) catch {};
+        out_packet_queue.writeItem(.{ .set_pcluster_plugged = false });
         pcluster.acquire().connected = false;
         pcluster.release();
     }
@@ -97,10 +97,10 @@ pub fn connectToControllerTask() !void {
         defer client.stream.close();
 
         out_packet_queue = .init;
-        try out_packet_queue.writeItem(.{ .set_pcluster_plugged = pcluster.get().connected });
+        out_packet_queue.writeItem(.{ .set_pcluster_plugged = pcluster.get().connected });
         const writer_thread = try std.Thread.spawn(.{}, controllerWriteLoop, .{client.stream.writer()});
         defer {
-            out_packet_queue.writeItem(.{ .disconnect = {} }) catch {};
+            out_packet_queue.writeItem(.{ .disconnect = {} });
             writer_thread.join();
         }
 
@@ -124,8 +124,8 @@ fn controllerReadLoop(allocator: Allocator, client: std.net.Server.Connection) !
                 pcluster.acquire().config = config;
                 pcluster.release();
             },
-            .request_protocol_version => try out_packet_queue.writeItem(.{ .request_protocol_version_response = protocol.version }),
-            .request_system_information => try out_packet_queue.writeItem(.{ .request_system_information_response = sys_info }),
+            .request_protocol_version => out_packet_queue.writeItem(.{ .request_protocol_version_response = protocol.version }),
+            .request_system_information => out_packet_queue.writeItem(.{ .request_system_information_response = sys_info }),
         }
     }
 }

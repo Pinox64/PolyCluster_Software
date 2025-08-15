@@ -9,11 +9,13 @@ pub fn ThreadSafeQueue(T: type, comptime size: usize) type {
 
         pub const init = Queue{ .queue = .init() };
 
-        pub fn writeItem(queue: *Queue, t: T) !void {
+        pub fn writeItem(queue: *Queue, t: T) void {
             queue.mutex.lock();
             defer queue.mutex.unlock();
 
-            try queue.queue.writeItem(t);
+            if (queue.queue.count == size) queue.queue.discard(1);
+
+            queue.queue.writeItem(t) catch unreachable;
             queue.sema.post();
         }
 
