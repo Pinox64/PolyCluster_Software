@@ -122,7 +122,7 @@ pub fn layoutDial(index: u32) void {
             },
             .corner_radius = .all(90),
             .border = .{
-                .color = pclusterConfigColorToClayColor(pcluster_config.get().dial.color, 255),
+                .color = pclusterConfigColorToClayColor(pcluster_config.get().dial),
                 .width = .all(3),
             },
             .background_color = .{ 50, 50, 50, 50 },
@@ -163,7 +163,7 @@ pub fn layoutDial(index: u32) void {
                         .w = .fixed(70),
                     },
                 },
-                .background_color = pclusterConfigColorToClayColor(pcluster_config.get().needle.color, 255),
+                .background_color = pclusterConfigColorToClayColor(pcluster_config.get().needle),
             })({});
         });
 
@@ -253,7 +253,7 @@ pub fn layoutStatusDot(text: []const u8, width: f32, color: clay.Color) void {
     });
 }
 
-pub fn layoutColorChoosingWidget(text: []const u8, current_color: *PClusterConfig.ColorAndBrightness) void {
+pub fn layoutColorChoosingWidget(text: []const u8, current_color: *PClusterConfig.Color) void {
     @setEvalBranchQuota(10000);
     const pure_red = comptime colorFromHexString("ff0000ff") catch unreachable;
     const pure_green = comptime colorFromHexString("00ff00ff") catch unreachable;
@@ -303,12 +303,12 @@ pub fn layoutColorChoosingWidget(text: []const u8, current_color: *PClusterConfi
                 },
                 .background_color = shadow,
             })({
-                clay.onHover(*u8, &current_color.color.r, incrementU8ByScrollingFn);
+                clay.onHover(*u8, &current_color.r, incrementU8ByScrollingFn);
                 clay.UI()(clay.ElementDeclaration{
                     .layout = .{
                         .sizing = .{
                             .w = .fixed(20),
-                            .h = .fixed(@as(f32, @floatFromInt(current_color.color.r)) * 79 / 255 + 1),
+                            .h = .fixed(@as(f32, @floatFromInt(current_color.r)) * 79 / 255 + 1),
                         },
                     },
                     .background_color = pure_red,
@@ -325,12 +325,12 @@ pub fn layoutColorChoosingWidget(text: []const u8, current_color: *PClusterConfi
                 },
                 .background_color = shadow,
             })({
-                clay.onHover(*u8, &current_color.color.g, incrementU8ByScrollingFn);
+                clay.onHover(*u8, &current_color.g, incrementU8ByScrollingFn);
                 clay.UI()(clay.ElementDeclaration{
                     .layout = .{
                         .sizing = .{
                             .w = .fixed(20),
-                            .h = .fixed(@as(f32, @floatFromInt(current_color.color.g)) * 79 / 255 + 1),
+                            .h = .fixed(@as(f32, @floatFromInt(current_color.g)) * 79 / 255 + 1),
                         },
                     },
                     .background_color = pure_green,
@@ -347,12 +347,12 @@ pub fn layoutColorChoosingWidget(text: []const u8, current_color: *PClusterConfi
                 },
                 .background_color = shadow,
             })({
-                clay.onHover(*u8, &current_color.color.b, incrementU8ByScrollingFn);
+                clay.onHover(*u8, &current_color.b, incrementU8ByScrollingFn);
                 clay.UI()(clay.ElementDeclaration{
                     .layout = .{
                         .sizing = .{
                             .w = .fixed(20),
-                            .h = .fixed(@as(f32, @floatFromInt(current_color.color.b)) * 79 / 255 + 1),
+                            .h = .fixed(@as(f32, @floatFromInt(current_color.b)) * 79 / 255 + 1),
                         },
                     },
                     .background_color = pure_blue,
@@ -386,8 +386,8 @@ pub fn layoutColorChoosingWidget(text: []const u8, current_color: *PClusterConfi
     });
 }
 
-pub fn pclusterConfigColorToClayColor(color: PClusterConfig.Color, opacity: f32) clay.Color {
-    return .{ @floatFromInt(color.r), @floatFromInt(color.g), @floatFromInt(color.b), opacity };
+pub fn pclusterConfigColorToClayColor(color: PClusterConfig.Color) clay.Color {
+    return .{ @floatFromInt(color.r), @floatFromInt(color.g), @floatFromInt(color.b), @floatFromInt(color.brightness) };
 }
 
 pub fn colorFromHexString(str: []const u8) !clay.Color {

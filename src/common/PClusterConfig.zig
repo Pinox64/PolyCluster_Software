@@ -12,10 +12,6 @@ pub const Color = struct {
     r: u8 = 0,
     g: u8 = 0,
     b: u8 = 0,
-};
-
-pub const ColorAndBrightness = struct {
-    color: Color = .{},
     brightness: u8 = 100,
 };
 
@@ -41,15 +37,15 @@ pub const LEDMode = enum(u8) {
 
 displays: [4]DisplayInfo = @splat(.off),
 led_mode: LEDMode = .solid,
-dial: ColorAndBrightness = .{},
-needle: ColorAndBrightness = .{},
+dial: Color = .{},
+needle: Color = .{},
 update_period_ms: u64 = 3000,
 
 pub const default = PClusterConfig{
     .displays = [4]DisplayInfo{ .cpu_usage, .cpu_temperature, .mem_usage, .off },
     .led_mode = .solid,
-    .dial = .{ .brightness = 100, .color = .{ .r = 0, .g = 0, .b = 255 } },
-    .needle = .{ .brightness = 100, .color = .{ .r = 0, .g = 255, .b = 0 } },
+    .dial = .{ .brightness = 100, .r = 0, .g = 0, .b = 255 },
+    .needle = .{ .brightness = 100, .r = 0, .g = 255, .b = 0 },
 };
 
 fn ensureConfigFileExists(path: []const u8) !void {
@@ -136,14 +132,14 @@ pub fn writeReport(pcluster_config: *const PClusterConfig, buffer: *[20]u8, info
         writer.writeByte(byte) catch unreachable;
     }
     writer.writeByte(@intFromEnum(pcluster_config.led_mode)) catch unreachable;
-    writer.writeByte(pcluster_config.dial.brightness) catch unreachable;
-    writer.writeByte(pcluster_config.dial.color.r) catch unreachable;
-    writer.writeByte(pcluster_config.dial.color.g) catch unreachable;
-    writer.writeByte(pcluster_config.dial.color.b) catch unreachable;
-    writer.writeByte(pcluster_config.needle.brightness) catch unreachable;
-    writer.writeByte(pcluster_config.needle.color.r) catch unreachable;
-    writer.writeByte(pcluster_config.needle.color.g) catch unreachable;
-    writer.writeByte(pcluster_config.needle.color.b) catch unreachable;
+    writer.writeByte(@intCast(@as(usize, pcluster_config.dial.brightness) * 100 / 255)) catch unreachable;
+    writer.writeByte(pcluster_config.dial.r) catch unreachable;
+    writer.writeByte(pcluster_config.dial.g) catch unreachable;
+    writer.writeByte(pcluster_config.dial.b) catch unreachable;
+    writer.writeByte(@intCast(@as(usize, pcluster_config.needle.brightness) * 100 / 255)) catch unreachable;
+    writer.writeByte(pcluster_config.needle.r) catch unreachable;
+    writer.writeByte(pcluster_config.needle.g) catch unreachable;
+    writer.writeByte(pcluster_config.needle.b) catch unreachable;
 }
 
 pub fn readFrom(reader: anytype) !PClusterConfig {
@@ -160,8 +156,8 @@ test "report bytes" {
     const config = PClusterConfig{
         .displays = [4]PClusterConfig.DisplayInfo{ .cpu_usage, .cpu_temperature, .mem_usage, .off },
         .led_mode = .solid,
-        .dial = .{ .brightness = 100, .color = .{ .r = 0, .g = 0, .b = 255 } },
-        .needle = .{ .brightness = 100, .color = .{ .r = 0, .g = 255, .b = 0 } },
+        .dial = .{ .brightness = 100, .r = 0, .g = 0, .b = 255 },
+        .needle = .{ .brightness = 100, .r = 0, .g = 255, .b = 0 },
     };
 
     const info = SystemInformation{
@@ -177,14 +173,14 @@ test "report bytes" {
         @intFromEnum(config.displays[3]), 0, // DisplayInfo 4
         @intFromEnum(config.led_mode), //
 
-        config.dial.brightness,
-        config.dial.color.r,
-        config.dial.color.g,
-        config.dial.color.b,
-        config.needle.brightness,
-        config.needle.color.r,
-        config.needle.color.g,
-        config.needle.color.b,
+        @intCast(@as(usize, config.dial.brightness) * 100 / 255),
+        config.dial.r,
+        config.dial.g,
+        config.dial.b,
+        @intCast(@as(usize, config.needle.brightness) * 100 / 255),
+        config.needle.r,
+        config.needle.g,
+        config.needle.b,
     };
 
     var buffer: [20]u8 = undefined;
