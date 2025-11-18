@@ -50,7 +50,7 @@ namespace PCluster_PC_Utility
             this.exitMenuItem2 = new System.Windows.Forms.ToolStripMenuItem();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
-            this.toolStripConnectionStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
+            this.toolStripSerialNumber = new System.Windows.Forms.ToolStripStatusLabel();
             this.buttonBootloader = new System.Windows.Forms.Button();
             this.buttonRst = new System.Windows.Forms.Button();
             this.buttonExit = new System.Windows.Forms.Button();
@@ -58,6 +58,9 @@ namespace PCluster_PC_Utility
             this.colorDialog1 = new System.Windows.Forms.ColorDialog();
             this.btnNeedleColor = new System.Windows.Forms.Button();
             this.trackBar2 = new System.Windows.Forms.TrackBar();
+            this.button_test = new System.Windows.Forms.Button();
+            this.label6 = new System.Windows.Forms.Label();
+            this.toolStripStatusLabel2 = new System.Windows.Forms.ToolStripStatusLabel();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar1)).BeginInit();
             this.contextMenuStrip.SuspendLayout();
             this.statusStrip1.SuspendLayout();
@@ -155,7 +158,7 @@ namespace PCluster_PC_Utility
             "Rainbow"});
             this.comboBox5.Location = new System.Drawing.Point(70, 118);
             this.comboBox5.Name = "comboBox5";
-            this.comboBox5.Size = new System.Drawing.Size(86, 21);
+            this.comboBox5.Size = new System.Drawing.Size(121, 21);
             this.comboBox5.TabIndex = 6;
             this.comboBox5.SelectedIndexChanged += new System.EventHandler(this.comboBox5_SelectedIndexChanged);
             // 
@@ -208,7 +211,7 @@ namespace PCluster_PC_Utility
             // 
             this.trackBar1.Location = new System.Drawing.Point(70, 145);
             this.trackBar1.Name = "trackBar1";
-            this.trackBar1.Size = new System.Drawing.Size(121, 45);
+            this.trackBar1.Size = new System.Drawing.Size(248, 45);
             this.trackBar1.TabIndex = 13;
             this.trackBar1.Scroll += new System.EventHandler(this.trackBar1_Scroll);
             // 
@@ -246,7 +249,8 @@ namespace PCluster_PC_Utility
             // 
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolStripStatusLabel1,
-            this.toolStripConnectionStatusLabel});
+            this.toolStripStatusLabel2,
+            this.toolStripSerialNumber});
             this.statusStrip1.Location = new System.Drawing.Point(0, 278);
             this.statusStrip1.Name = "statusStrip1";
             this.statusStrip1.Size = new System.Drawing.Size(653, 22);
@@ -258,11 +262,10 @@ namespace PCluster_PC_Utility
             this.toolStripStatusLabel1.Name = "toolStripStatusLabel1";
             this.toolStripStatusLabel1.Size = new System.Drawing.Size(0, 17);
             // 
-            // toolStripConnectionStatusLabel
+            // toolStripSerialNumber
             // 
-            this.toolStripConnectionStatusLabel.Name = "toolStripConnectionStatusLabel";
-            this.toolStripConnectionStatusLabel.Size = new System.Drawing.Size(117, 17);
-            this.toolStripConnectionStatusLabel.Text = "Device Disconnected";
+            this.toolStripSerialNumber.Name = "toolStripSerialNumber";
+            this.toolStripSerialNumber.Size = new System.Drawing.Size(0, 17);
             // 
             // buttonBootloader
             // 
@@ -296,10 +299,10 @@ namespace PCluster_PC_Utility
             // 
             // btnDialColor
             // 
-            this.btnDialColor.Location = new System.Drawing.Point(168, 118);
+            this.btnDialColor.Location = new System.Drawing.Point(197, 117);
             this.btnDialColor.Name = "btnDialColor";
             this.btnDialColor.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.btnDialColor.Size = new System.Drawing.Size(23, 21);
+            this.btnDialColor.Size = new System.Drawing.Size(121, 21);
             this.btnDialColor.TabIndex = 18;
             this.btnDialColor.UseVisualStyleBackColor = true;
             this.btnDialColor.Click += new System.EventHandler(this.btnDialColor_Click);
@@ -313,27 +316,54 @@ namespace PCluster_PC_Utility
             // 
             // btnNeedleColor
             // 
-            this.btnNeedleColor.Location = new System.Drawing.Point(295, 117);
+            this.btnNeedleColor.Location = new System.Drawing.Point(422, 117);
             this.btnNeedleColor.Name = "btnNeedleColor";
             this.btnNeedleColor.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.btnNeedleColor.Size = new System.Drawing.Size(23, 21);
+            this.btnNeedleColor.Size = new System.Drawing.Size(150, 21);
             this.btnNeedleColor.TabIndex = 19;
             this.btnNeedleColor.UseVisualStyleBackColor = true;
             this.btnNeedleColor.Click += new System.EventHandler(this.btnNeedleColor_Click);
             // 
             // trackBar2
             // 
-            this.trackBar2.Location = new System.Drawing.Point(197, 144);
+            this.trackBar2.Location = new System.Drawing.Point(324, 145);
             this.trackBar2.Name = "trackBar2";
-            this.trackBar2.Size = new System.Drawing.Size(121, 45);
+            this.trackBar2.Size = new System.Drawing.Size(248, 45);
             this.trackBar2.TabIndex = 20;
             this.trackBar2.Scroll += new System.EventHandler(this.trackBar2_Scroll);
+            // 
+            // button_test
+            // 
+            this.button_test.Location = new System.Drawing.Point(324, 219);
+            this.button_test.Name = "button_test";
+            this.button_test.Size = new System.Drawing.Size(121, 23);
+            this.button_test.TabIndex = 21;
+            this.button_test.Text = "Test Mode";
+            this.button_test.UseVisualStyleBackColor = true;
+            this.button_test.Click += new System.EventHandler(this.button_test_Click);
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(330, 117);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(41, 13);
+            this.label6.TabIndex = 22;
+            this.label6.Text = "Needle";
+            // 
+            // toolStripStatusLabel2
+            // 
+            this.toolStripStatusLabel2.Name = "toolStripStatusLabel2";
+            this.toolStripStatusLabel2.Size = new System.Drawing.Size(117, 17);
+            this.toolStripStatusLabel2.Text = "Device Disconnected";
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(653, 300);
+            this.Controls.Add(this.label6);
+            this.Controls.Add(this.button_test);
             this.Controls.Add(this.trackBar2);
             this.Controls.Add(this.btnNeedleColor);
             this.Controls.Add(this.btnDialColor);
@@ -387,7 +417,7 @@ namespace PCluster_PC_Utility
     private ToolStripMenuItem exitMenuItem2;
     private StatusStrip statusStrip1;
     private ToolStripStatusLabel toolStripStatusLabel1;
-    private ToolStripStatusLabel toolStripConnectionStatusLabel;
+    private ToolStripStatusLabel toolStripSerialNumber;
         private Button buttonBootloader;
         private Button buttonRst;
         private Button buttonExit;
@@ -395,6 +425,9 @@ namespace PCluster_PC_Utility
         private ColorDialog colorDialog1;
         private Button btnNeedleColor;
         private TrackBar trackBar2;
+        private Button button_test;
+        private Label label6;
+        private ToolStripStatusLabel toolStripStatusLabel2;
     }
 }
 

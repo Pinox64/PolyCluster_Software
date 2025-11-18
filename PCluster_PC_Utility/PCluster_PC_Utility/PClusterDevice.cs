@@ -32,6 +32,7 @@ namespace PCluster
 
         public bool bootLoaderMode = new bool();
         public bool reset = new bool();
+        public bool testMode = new bool();
         public void update()
         {
             if (Device == null)
@@ -47,7 +48,11 @@ namespace PCluster
                 }
                 else
                 {
+                    Device.ReadSerialNumber(out var SerialNum);
+                    Console.WriteLine(System.Text.Encoding.Unicode.GetString(SerialNum).TrimEnd('\0'));
+                    SerialID = System.Text.Encoding.Unicode.GetString(SerialNum).TrimEnd('\0');
                     Status = true;
+                    
                     disp1.Value = DisplayInfos.FirstOrDefault(item => item.ID == disp1.DisplayedInfo).Value;
                     disp2.Value = DisplayInfos.FirstOrDefault(item => item.ID == disp2.DisplayedInfo).Value;
                     disp3.Value = DisplayInfos.FirstOrDefault(item => item.ID == disp3.DisplayedInfo).Value;
@@ -75,6 +80,10 @@ namespace PCluster
                     if (bootLoaderMode)
                     {
                         reportdata[2] = 42;
+                    }
+                    if (testMode)
+                    {
+                        reportdata[2] = 43;
                     }
                     HidReport report = new HidReport(reportdata.Length, new HidDeviceData(reportdata, HidDeviceData.ReadStatus.Success));
                     report.ReportId = 0x55;

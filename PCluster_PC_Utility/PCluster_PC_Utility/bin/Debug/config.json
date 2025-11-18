@@ -2,5 +2,11 @@
   "Display1": 1,
   "Display2": 2,
   "Display3": 3,
-  "Display4": 4
+  "Display4": 4,
+  "DialColor": "#F0F0F0",
+  "NeedleColor": "#FFFFFF",
+  "DialMode": 3,
+  "NeedleMode": 0,
+  "DialBrightness": 8,
+  "NeedleBrightness": 10
 }

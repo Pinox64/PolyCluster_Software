@@ -69,7 +69,7 @@ namespace PCluster_PC_Utility
         {
             device = HidDevices.Enumerate(0x1A86, 0xE429).FirstOrDefault();
             hardwareUpdater = new Thread(ReportSystemInfo);
-            hardwareUpdater.Priority = ThreadPriority.Highest;
+            hardwareUpdater.Priority = ThreadPriority.BelowNormal;
             hardwareUpdater.Start();
             //Console.WriteLine(device.Capabilities.FeatureReportByteLength);
             try
@@ -184,7 +184,7 @@ namespace PCluster_PC_Utility
 
             while (true)
             {
-                Thread.Sleep(100);
+                Thread.Sleep(1000);
                 foreach (var hardware in c.Hardware)
                 {
                     if (hardware.HardwareType == HardwareType.CPU)
@@ -296,7 +296,8 @@ namespace PCluster_PC_Utility
                 if (PCluster1.Status != oldPclusterStatus)
                 {
                     oldPclusterStatus = PCluster1.Status;
-                    toolStripConnectionStatusLabel.Text = PCluster1.Status ? "Connected" : "Disconnected";
+                    toolStripStatusLabel2.Text = PCluster1.Status ? "Connected" : "Disconnected";
+                    toolStripSerialNumber.Text = PCluster1.Status ? "S/N: " + PCluster1.SerialID : "";
                 }
             }
         }
@@ -541,6 +542,13 @@ namespace PCluster_PC_Utility
         private Color HexStringToColor(string hex)
         {
             return ColorTranslator.FromHtml(hex);
+        }
+
+        private void button_test_Click(object sender, EventArgs e)
+        {
+            PCluster1.testMode = !PCluster1.testMode;
+            if (PCluster1.testMode) button_test.BackColor = System.Drawing.Color.DarkGray;
+            else button_test.BackColor = System.Drawing.Color.White;
         }
     }
 }
