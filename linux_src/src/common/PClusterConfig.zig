@@ -1,0 +1,201 @@
+const std = @import("std");
+const Allocator = std.mem.Allocator;
+const PClusterConfig = @This();
+const SystemInformation = @import("SystemInformation.zig");
+const serial = @import("serial.zig");
+
+const Error = error{
+    SystemInformationNotSupported,
+};
+
+pub const Color = struct {
+    r: u8 = 0,
+    g: u8 = 0,
+    b: u8 = 0,
+    brightness: u8 = 100,
+};
+
+pub const DisplayInfo = enum(u8) {
+    off = 0,
+    cpu_usage = 1,
+    cpu_temperature = 2,
+    mem_usage = 3,
+    gpu_usage = 4,
+    gpu_temperature = 5,
+
+    pub fn nextN(info: DisplayInfo, n: i8) DisplayInfo {
+        var val: u8 = @intFromEnum(info);
+        val +%= @bitCast(n);
+        val %= std.meta.fields(DisplayInfo).len;
+        return @enumFromInt(val);
+    }
+};
+
+pub const LEDMode = enum(u8) {
+    solid = 1,
+};
+
+displays: [4]DisplayInfo = @splat(.off),
+led_mode: LEDMode = .solid,
+dial: Color = .{},
+needle: Color = .{},
+update_period_ms: u64 = 3000,
+
+pub const default = PClusterConfig{
+    .displays = [4]DisplayInfo{ .cpu_usage, .cpu_temperature, .mem_usage, .off },
+    .led_mode = .solid,
+    .dial = .{ .brightness = 100, .r = 0, .g = 0, .b = 255 },
+    .needle = .{ .brightness = 100, .r = 0, .g = 255, .b = 0 },
+};
+
+fn ensureConfigFileExists(path: []const u8) !void {
+    const dirname = std.fs.path.dirname(path) orelse return error.NotAFilePath;
+    var deepest_dir = try std.fs.cwd().makeOpenPath(dirname, .{});
+    defer deepest_dir.close();
+
+    var config_file = deepest_dir.openFile(path, .{ .mode = .write_only }) catch blk: {
+        std.debug.print("file not found!\n", .{});
+        const file = try deepest_dir.createFile(path, .{});
+        try default.saveToWriter(file.writer());
+        break :blk file;
+    };
+    defer config_file.close();
+}
+
+pub fn loadFromPath(path: []const u8) !PClusterConfig {
+    try ensureConfigFileExists(path);
+
+    const file = try std.fs.cwd().openFile(path, .{ .mode = .read_only });
+    defer file.close();
+
+    var buffer: [8192]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+
+    return try loadFromReader(fba.allocator(), file.reader());
+}
+
+pub fn loadFromReader(allocator: Allocator, reader: anytype) !PClusterConfig {
+    var bytes = std.ArrayList(u8).init(allocator);
+    defer bytes.deinit();
+
+    try reader.readAllArrayList(&bytes, 8192);
+    try bytes.append(0);
+    const null_terminated_bytes: [:0]u8 = bytes.items[0 .. bytes.items.len - 1 :0];
+
+    var status = std.zon.parse.Status{};
+    defer status.deinit(allocator);
+    return std.zon.parse.fromSlice(PClusterConfig, allocator, null_terminated_bytes, &status, .{}) catch |err| {
+        if (err == error.ParseZon) {
+            std.log.info("Config file at {}", .{status});
+        }
+
+        return err;
+    };
+}
+
+pub fn saveToWriter(pcluster_config: PClusterConfig, writer: anytype) !void {
+    return std.zon.stringify.serialize(pcluster_config, .{}, writer);
+}
+
+pub fn saveToPath(path: []const u8) !PClusterConfig {
+    ensureConfigFileExists(path);
+
+    const file = try std.fs.cwd().openFile(path, .{ .mode = .read_only });
+    defer file.close();
+
+    var buffer: [1024]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+
+    return try loadFromReader(fba.allocator(), file.reader());
+}
+
+pub fn writeReport(pcluster_config: *const PClusterConfig, buffer: *[20]u8, info: SystemInformation) !void {
+    var stream = std.io.fixedBufferStream(buffer);
+    var writer = stream.writer();
+    writer.writeByte(0) catch unreachable;
+    writer.writeByte(64) catch unreachable;
+    writer.writeByte(0) catch unreachable;
+
+    // TODO: a function that can serialize any type and write to a writer?
+    for (pcluster_config.displays) |display_info| {
+        writer.writeByte(@intFromEnum(display_info)) catch unreachable;
+        const byte: u8 = switch (display_info) {
+            .off => 0,
+            .cpu_usage => @intFromFloat(@round(info.cpu_usage_percent)),
+            .cpu_temperature => @intFromFloat(@round(info.cpu_temperature_celsius)),
+            .mem_usage => @intFromFloat(@round(info.memory_usage_percent)),
+            inline else => |not_supported| blk: {
+                std.log.err("SystemInformation not supported: {s}\n", .{@tagName(not_supported)});
+                break :blk 0;
+            },
+        };
+        writer.writeByte(byte) catch unreachable;
+    }
+    writer.writeByte(@intFromEnum(pcluster_config.led_mode)) catch unreachable;
+    writer.writeByte(@intCast(@as(usize, pcluster_config.dial.brightness) * 100 / 255)) catch unreachable;
+    writer.writeByte(pcluster_config.dial.r) catch unreachable;
+    writer.writeByte(pcluster_config.dial.g) catch unreachable;
+    writer.writeByte(pcluster_config.dial.b) catch unreachable;
+    writer.writeByte(@intCast(@as(usize, pcluster_config.needle.brightness) * 100 / 255)) catch unreachable;
+    writer.writeByte(pcluster_config.needle.r) catch unreachable;
+    writer.writeByte(pcluster_config.needle.g) catch unreachable;
+    writer.writeByte(pcluster_config.needle.b) catch unreachable;
+}
+
+pub fn readFrom(reader: anytype) !PClusterConfig {
+    // Passing undefined for the allocator is safe because there's dynamic data in PClusterConfig
+    return try serial.deserialize(PClusterConfig, undefined, reader, .little);
+}
+
+pub fn writeTo(config: PClusterConfig, writer: anytype) !void {
+    // INFO: Instead of using serial, use std.zig.zon.stringify.serialize instead? Use compression ?
+    try serial.serialize(config, writer, .little);
+}
+
+test "report bytes" {
+    const config = PClusterConfig{
+        .displays = [4]PClusterConfig.DisplayInfo{ .cpu_usage, .cpu_temperature, .mem_usage, .off },
+        .led_mode = .solid,
+        .dial = .{ .brightness = 100, .r = 0, .g = 0, .b = 255 },
+        .needle = .{ .brightness = 100, .r = 0, .g = 255, .b = 0 },
+    };
+
+    const info = SystemInformation{
+        .cpu_usage_percent = 20,
+        .cpu_temperature_celsius = 30,
+        .memory_usage_percent = 40,
+    };
+    const expected_report_bytes = [20]u8{ //
+        0, 64, 0, // prefix
+        @intFromEnum(config.displays[0]), @intFromFloat(info.cpu_usage_percent), // DisplayInfo 1
+        @intFromEnum(config.displays[1]), @intFromFloat(info.cpu_temperature_celsius), // DisplayInfo 2
+        @intFromEnum(config.displays[2]), @intFromFloat(info.memory_usage_percent), // DisplayInfo 3
+        @intFromEnum(config.displays[3]), 0, // DisplayInfo 4
+        @intFromEnum(config.led_mode), //
+
+        @intCast(@as(usize, config.dial.brightness) * 100 / 255),
+        config.dial.r,
+        config.dial.g,
+        config.dial.b,
+        @intCast(@as(usize, config.needle.brightness) * 100 / 255),
+        config.needle.r,
+        config.needle.g,
+        config.needle.b,
+    };
+
+    var buffer: [20]u8 = undefined;
+    try config.writeReport(&buffer, info);
+
+    try std.testing.expectEqual(expected_report_bytes, buffer);
+}
+
+test "read/write config" {
+    var buffer: [1024]u8 = undefined;
+    var stream = std.io.fixedBufferStream(&buffer);
+    const config = PClusterConfig.default;
+
+    try config.writeTo(stream.writer());
+    stream.pos = 0;
+    const read_config = try PClusterConfig.readFrom(stream.reader());
+    try std.testing.expectEqualDeep(config, read_config);
+}
