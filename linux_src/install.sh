@@ -6,6 +6,7 @@ set -euo pipefail
 #   1) Configure permissions only (udev + group) so the backend can talk to the device
 #   2) Full install: binaries to /usr/local/bin + permissions + systemd service (auto-start)
 #   3) Install binaries + permissions + systemd service, but DO NOT auto-start on boot
+#   4) Uninstall everything this installer may have set up (binaries, service, udev rule, group entry)
 
 # -----------------------------
 # Configuration
@@ -209,6 +210,50 @@ print_summary_install_no_autostart() {
     echo
 }
 
+uninstall_all() {
+    echo "Uninstalling PCluster backend, service, and permissions..."
+
+    if command -v systemctl >/dev/null 2>&1; then
+        echo "Stopping/disabling ${SERVICE_NAME} (if present)..."
+        systemctl stop "${SERVICE_NAME}" 2>/dev/null || true
+        systemctl disable "${SERVICE_NAME}" 2>/dev/null || true
+    fi
+
+    if [[ -f "${SERVICE_FILE}" ]]; then
+        echo "Removing systemd unit ${SERVICE_FILE}..."
+        rm -f "${SERVICE_FILE}"
+        command -v systemctl >/dev/null 2>&1 && systemctl daemon-reload
+    fi
+
+    echo "Removing binaries..."
+    rm -f "${BACKEND_DEST}" "${UI_DEST}" "${LEGACY_BIN}"
+
+    if [[ -f "${UDEV_RULE_FILE}" ]]; then
+        echo "Removing udev rule ${UDEV_RULE_FILE}..."
+        rm -f "${UDEV_RULE_FILE}"
+        udevadm control --reload-rules
+        udevadm trigger
+    fi
+
+    if getent group pcluster >/dev/null 2>&1; then
+        if [[ -n "${TARGET_USER}" ]]; then
+            echo "Attempting to remove user '${TARGET_USER}' from group 'pcluster' (if present)..."
+            gpasswd -d "${TARGET_USER}" pcluster 2>/dev/null || true
+        fi
+        # Remove group if now empty
+        if ! getent group pcluster | awk -F: '{print $4}' | grep -q '.'; then
+            echo "Removing empty group 'pcluster'..."
+            groupdel pcluster 2>/dev/null || true
+        else
+            echo "Group 'pcluster' still has members; leaving it in place."
+        fi
+    fi
+
+    echo
+    echo "Uninstall complete. If you unplugged/plugged the device earlier, you may need to replug once more."
+    echo
+}
+
 # -----------------------------
 # Menu
 # -----------------------------
@@ -238,7 +283,12 @@ echo "     - Install udev rule and group"
 echo "     - Create systemd service ${SERVICE_NAME}"
 echo "     - Do NOT enable service on boot"
 echo
-read -rp "Enter choice [1/2/3] (or anything else to cancel): " CHOICE
+echo "  4) Uninstall everything created by this installer"
+echo "     - Remove systemd service, binaries, legacy shim"
+echo "     - Remove udev rule and reload udev"
+echo "     - Remove pcluster group if empty (and remove invoking user from it if present)"
+echo
+read -rp "Enter choice [1/2/3/4] (or anything else to cancel): " CHOICE
 echo
 
 case "${CHOICE}" in
@@ -276,6 +326,9 @@ case "${CHOICE}" in
             echo
         fi
         print_summary_install_no_autostart
+        ;;
+    4)
+        uninstall_all
         ;;
     *)
         echo "Installation cancelled."
