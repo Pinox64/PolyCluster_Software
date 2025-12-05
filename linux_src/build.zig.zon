@@ -1,5 +1,5 @@
 .{
-    .name = .PClusterDriver,
+    .name = .PClusterBackend,
     .version = "0.1.0",
     .fingerprint = 0xa01f8bd4b11e2afa,
     .minimum_zig_version = "0.14.1",

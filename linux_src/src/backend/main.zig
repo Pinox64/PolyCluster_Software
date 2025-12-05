@@ -50,7 +50,7 @@ pub fn main() !void {
         writeReportToPClusterLoop() catch |e| {
             out_packet_queue.writeItem(.{ .set_pcluster_plugged = false });
             const seconds_to_wait = 2;
-            std.log.err("Error while executing the driver loop: {s}. Retrying in {d} seconds", .{ @errorName(e), seconds_to_wait });
+            std.log.err("Error while executing the backend loop: {s}. Retrying in {d} seconds", .{ @errorName(e), seconds_to_wait });
             std.Thread.sleep(std.time.ns_per_s * seconds_to_wait);
         };
     }
@@ -115,7 +115,7 @@ fn controllerReadLoop(allocator: Allocator, client: std.net.Server.Connection) !
     const reader = buffered_reader.reader();
 
     while (true) {
-        const in_packet = try protocol.DriverBoundPacket.read(allocator, reader);
+        const in_packet = try protocol.BackendBoundPacket.read(allocator, reader);
         defer in_packet.deinit(allocator);
 
         switch (in_packet) {

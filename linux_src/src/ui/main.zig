@@ -10,7 +10,7 @@ const renderer = @import("raylib_render_clay.zig");
 
 const global = @import("global.zig");
 const pcluster_config = &global.pcluster_config;
-const driver_connected = &global.driver_connected;
+const backend_connected = &global.backend_connected;
 const pcluster_connected = &global.pcluster_connected;
 const system_information = &global.system_information;
 
@@ -35,8 +35,8 @@ pub fn main() !void {
         };
         pcluster_config.set(read_config);
 
-        var driver_connection_thread = try std.Thread.spawn(.{}, connectionWithDriverTask, .{});
-        driver_connection_thread.detach();
+        var backend_connection_thread = try std.Thread.spawn(.{}, connectionWithBackendTask, .{});
+        backend_connection_thread.detach();
         out_packet_queue.writeItem(.{ .set_config = read_config });
     }
 
@@ -104,40 +104,40 @@ pub fn main() !void {
     }
 }
 
-var out_packet_queue = common.ThreadSafeQueue(protocol.DriverBoundPacket, 64).init;
+var out_packet_queue = common.ThreadSafeQueue(protocol.BackendBoundPacket, 64).init;
 
-pub fn connectionWithDriverTask() void {
+pub fn connectionWithBackendTask() void {
     var debug_allocator: std.heap.DebugAllocator(.{ .thread_safe = true }) = .init;
     defer _ = debug_allocator.deinit();
     const allocator = debug_allocator.allocator();
 
     while (true) {
-        connectWithDriver(allocator) catch continue;
+        connectWithBackend(allocator) catch continue;
         std.Thread.sleep(std.time.ns_per_ms * 100);
     }
 }
 
-pub fn connectWithDriver(allocator: Allocator) !void {
+pub fn connectWithBackend(allocator: Allocator) !void {
     const conn = try std.net.tcpConnectToHost(allocator, "127.0.0.1", protocol.default_port);
     defer conn.close();
 
-    driver_connected.set(true);
+    backend_connected.set(true);
     defer {
-        driver_connected.set(false);
+        backend_connected.set(false);
         pcluster_connected.set(false);
     }
 
     out_packet_queue = .init;
     out_packet_queue.writeItem(.{ .request_protocol_version = {} });
-    const writer_thread = try std.Thread.spawn(.{}, driverWriteLoop, .{conn.writer()});
+    const writer_thread = try std.Thread.spawn(.{}, backendWriteLoop, .{conn.writer()});
     defer {
         out_packet_queue.writeItem(.{ .disconnect = {} });
         writer_thread.join();
     }
-    driverReadLoop(allocator, conn.reader());
+    backendReadLoop(allocator, conn.reader());
 }
 
-pub fn driverWriteLoop(unbuffered_writer: anytype) void {
+pub fn backendWriteLoop(unbuffered_writer: anytype) void {
     var buffered_writer = std.io.bufferedWriter(unbuffered_writer);
     const writer = buffered_writer.writer();
     while (true) {
@@ -151,7 +151,7 @@ pub fn driverWriteLoop(unbuffered_writer: anytype) void {
     }
 }
 
-pub fn driverReadLoop(allocator: Allocator, reader: anytype) void {
+pub fn backendReadLoop(allocator: Allocator, reader: anytype) void {
     while (true) {
         const in_packet = protocol.ControllerBoundPacket.read(allocator, reader) catch return;
         defer in_packet.deinit(allocator);

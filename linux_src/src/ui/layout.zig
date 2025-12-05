@@ -6,7 +6,7 @@ const rl = @import("raylib");
 
 const global = @import("global.zig");
 const pcluster_config = &global.pcluster_config;
-const driver_connected = &global.driver_connected;
+const backend_connected = &global.backend_connected;
 const pcluster_connected = &global.pcluster_connected;
 const system_information = &global.system_information;
 
@@ -84,7 +84,7 @@ pub fn layout() void {
                 .attach_to = .to_root,
             },
         })({
-            layoutStatusDot("Driver", 14, if (driver_connected.get()) green else red);
+            layoutStatusDot("Backend", 14, if (backend_connected.get()) green else red);
             layoutStatusDot("PCluster", 14, if (pcluster_connected.get()) green else red);
         });
     });

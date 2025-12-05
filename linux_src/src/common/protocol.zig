@@ -41,7 +41,7 @@ pub const ControllerBoundPacket = union(enum(u8)) {
     pub const deinit = methods.deinit;
 };
 
-pub const DriverBoundPacket = union(enum(u8)) {
+pub const BackendBoundPacket = union(enum(u8)) {
     request_protocol_version: void,
     request_system_information: void,
     set_config: PClusterConfig,
@@ -71,7 +71,7 @@ fn PacketMethods(Packet: type) type {
 
 test "request protocol version write and read" {
     var buffer: [128]u8 = undefined;
-    const expected_packet = DriverBoundPacket{
+    const expected_packet = BackendBoundPacket{
         .request_protocol_version = {},
     };
 
@@ -82,13 +82,13 @@ test "request protocol version write and read" {
     try std.testing.expectEqual(@intFromEnum(std.meta.activeTag(expected_packet)), buffer[0]);
 
     stream.pos = 0;
-    const read_packet = try DriverBoundPacket.read(std.testing.allocator, stream.reader());
+    const read_packet = try BackendBoundPacket.read(std.testing.allocator, stream.reader());
     try std.testing.expectEqualDeep(expected_packet, read_packet);
 }
 
 test "set config write and read" {
     var buffer: [128]u8 = undefined;
-    const expected_packet = DriverBoundPacket{
+    const expected_packet = BackendBoundPacket{
         .set_config = .{},
     };
 
@@ -98,6 +98,6 @@ test "set config write and read" {
     try std.testing.expectEqual(@intFromEnum(std.meta.activeTag(expected_packet)), buffer[0]);
 
     stream.pos = 0;
-    const read_packet = try DriverBoundPacket.read(std.testing.allocator, stream.reader());
+    const read_packet = try BackendBoundPacket.read(std.testing.allocator, stream.reader());
     try std.testing.expectEqualDeep(expected_packet, read_packet);
 }
