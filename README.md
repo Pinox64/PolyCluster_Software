@@ -37,20 +37,20 @@ After the installation, the PCluster display should light up and start displayin
 It might be necessary to unplug and replug the device.
 For setting up colors, brightness and info to be displayed on the device, see the next section.
 
-## Usage of the UI
+### Usage of the UI (linux)
 
-### Start UI:
+#### Start UI:
 To start the user interface open a terminal and type:
 ```
 PCluster_UI
 ```
-### Changing the color and brightness
+#### Changing the color and brightness
 To change color, hover the mouse above one of the RGB sliders and rotate the scroll wheel.
 ### Change the info for each dial
 To change the info displayed on a specific dial, place the mouce cursor above the screen label of the dial and rotate the scroll wheel.
 
 
-## Managing Backend
+### Managing Backend (linux)
 
 ```
 systemctl status pcluster_backend.service
@@ -61,7 +61,8 @@ systemctl disable pcluster_backend.service
 
 ## Installation (Windows)
 
-Download the Windows version from Releases and run `PCluster.exe`.
+Download the Windows version from Releases and run `PCluster_Installer_vx.x.x.exe`.
+Please note that due to the fact that the software needs admin privilege to run, you will be prompted to allow the software to run as admin at every startup if you check the "run at startup option.
 
 ## License
 
