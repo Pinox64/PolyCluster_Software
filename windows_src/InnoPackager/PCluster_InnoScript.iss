@@ -34,16 +34,16 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "runonstartup"; Description: "Run {#MyAppName} when Windows starts"; GroupDescription: "Startup options:"; Flags: checkedonce
 
 [Files]
-Source: "C:\Repos\PCluster_Software\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Repos\PCluster_Software\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\{#MyAppManifestName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Repos\PCluster_Software\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\config.json"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Repos\PCluster_Software\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\HidLibrary.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Repos\PCluster_Software\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\HidLibrary.pdb"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Repos\PCluster_Software\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\Newtonsoft.Json.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Repos\PCluster_Software\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\Newtonsoft.Json.xml"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Repos\PCluster_Software\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\OpenHardwareMonitorLib.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Repos\PCluster_Software\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\PCluster_PC_Utility.exe.config"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Repos\PCluster_Software\PCluster_PC_Utility\PCluster_PC_Utility\PClusterIcon.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\repos\PCluster_Software\windows_src\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\repos\PCluster_Software\windows_src\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\{#MyAppManifestName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\repos\PCluster_Software\windows_src\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\config.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\repos\PCluster_Software\windows_src\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\HidLibrary.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\repos\PCluster_Software\windows_src\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\HidLibrary.pdb"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\repos\PCluster_Software\windows_src\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\Newtonsoft.Json.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\repos\PCluster_Software\windows_src\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\Newtonsoft.Json.xml"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\repos\PCluster_Software\windows_src\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\OpenHardwareMonitorLib.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\repos\PCluster_Software\windows_src\PCluster_PC_Utility\PCluster_PC_Utility\bin\Release\PCluster_PC_Utility.exe.config"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\repos\PCluster_Software\windows_src\PCluster_PC_Utility\PCluster_PC_Utility\PClusterIcon.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 ; Start menu / program list

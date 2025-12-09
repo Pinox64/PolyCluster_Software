@@ -88,11 +88,35 @@ namespace PCluster_PC_Utility
             comboBox4.Items.Clear();
 
             // Load JSON file
-            string jsonFilePath = Path.Combine("config.json");
-            string jsonContent = File.ReadAllText(jsonFilePath);
+            string exeDir = AppContext.BaseDirectory;              // folder where the EXE lives
+            string jsonFilePath = Path.Combine(exeDir, "config.json");
+            string jsonContent = @"
+                {
+                    Display1 = 0,
+                    Display2 = 0,
+                    Display3 = 0,
+                    Display4 = 0,
+                    DialColor = ""#FFFFFF"",
+                    NeedleColor = ""#FF0000"",
+                    DialMode = 0,
+                    NeedleMode = 0,
+                    DialBrightness = 5,
+                    NeedleBrightness = 5,
+                }, Formatting.Indented);";
+            try
+            {
+                jsonContent = File.ReadAllText(jsonFilePath);
+            }
+            catch
+            {
+                //Bad or missing config file, will create a new one
+            }
+            var config = JsonConvert.DeserializeObject<Config>(jsonContent);
+
+
 
             // Deserialize JSON to Config object
-            var config = JsonConvert.DeserializeObject<Config>(jsonContent);
+
 
             // Access parameters
             Console.WriteLine("Display1: " + config.Display1);
@@ -454,7 +478,8 @@ namespace PCluster_PC_Utility
             else
             {
                 // Allow the form to close normally
-                string jsonFilePath = Path.Combine("config.json");
+                string exeDir = AppContext.BaseDirectory;              // folder where the EXE lives
+                string jsonFilePath = Path.Combine(exeDir, "config.json");
                 // Deserialize JSON to Config object
                 notifyIcon1.Visible = false;  // Hide the icon if the form is actually closing
                 // Serialize the updated config object back to JSON
