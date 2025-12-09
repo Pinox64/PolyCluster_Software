@@ -14,6 +14,11 @@ This repository contains the platform-specific software required to communicate 
 - Separate Windows and Linux implementations
 - The code is source-available with protections against commercial cloning
 
+## Installation (Windows)
+
+Download the Windows version from Releases and run `PCluster_Installer_vx.x.x.exe`.
+Please note that due to the fact that the software needs admin privilege to run, you will be prompted to allow the software to run as admin at every startup if you check the "run at startup option.
+
 ## Installation (Linux)
 
 1. Download the lastest release archive from the release section of the repo. Make sure the files `PCluster_Backend`, `PCluster_UI`, and `install.sh` are present in a folder together.
@@ -58,11 +63,6 @@ systemctl stop pcluster_backend.service
 systemctl start pcluster_backend.service
 systemctl disable pcluster_backend.service
 ```
-
-## Installation (Windows)
-
-Download the Windows version from Releases and run `PCluster_Installer_vx.x.x.exe`.
-Please note that due to the fact that the software needs admin privilege to run, you will be prompted to allow the software to run as admin at every startup if you check the "run at startup option.
 
 ## License
 
