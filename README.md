@@ -1,6 +1,6 @@
-# PCluster — USB Needle Gauge Hardware Monitor
+# PolyCluster — USB Needle Gauge Hardware Monitor
 
-PCluster is a multi-purpose needle gauge display featuring 4 analog dials and 4 small OLED screens used as dynamic labels. When connected to a computer, PCluster displays real-time system information using a physical, mechanical interface.
+PolyCluster is a multi-purpose needle gauge display featuring 4 analog dials and 4 small OLED screens used as dynamic labels. When connected to a computer, PCluster displays real-time system information using a physical, mechanical interface.
 
 This repository contains the platform-specific software required to communicate with the PCluster hardware.
 
