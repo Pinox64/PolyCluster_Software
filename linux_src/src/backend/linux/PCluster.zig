@@ -27,10 +27,10 @@ pub fn openWithHIDRaw() !std.fs.File {
     const cwd = std.fs.cwd();
     var hidraw_dir = try cwd.openDir("/sys/class/hidraw/", .{ .iterate = true });
     defer hidraw_dir.close();
-    var hidraw_dir_itterator = hidraw_dir.iterate();
+    var hidraw_dir_iterator = hidraw_dir.iterate();
 
     var buffer: [1024]u8 = undefined;
-    while (try hidraw_dir_itterator.next()) |entry| {
+    while (try hidraw_dir_iterator.next()) |entry| {
         if (entry.kind != .sym_link) continue;
         const dest = try hidraw_dir.readLink(entry.name, &buffer);
 

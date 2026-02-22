@@ -18,9 +18,9 @@ pub fn getAverageCpuUsagePercent() !f64 {
     const stat = try std.fs.openFileAbsolute("/proc/stat", .{});
     defer stat.close();
     const bytes_read = try stat.readAll(&buffer);
-    var line_itterator = std.mem.tokenizeScalar(u8, buffer[0..bytes_read], '\n');
+    var line_iterator = std.mem.tokenizeScalar(u8, buffer[0..bytes_read], '\n');
 
-    while (line_itterator.next()) |line| {
+    while (line_iterator.next()) |line| {
         if (!std.mem.startsWith(u8, line, "cpu ")) continue;
         var it = std.mem.tokenizeScalar(u8, line, ' ');
 
@@ -72,17 +72,17 @@ pub fn getMemoryUsagePercent() !f64 {
     const meminfo = try std.fs.openFileAbsolute("/proc/meminfo", .{});
     defer meminfo.close();
     const bytes_read = try meminfo.readAll(&buffer);
-    var line_itterator = std.mem.tokenizeScalar(u8, buffer[0..bytes_read], '\n');
+    var line_iterator = std.mem.tokenizeScalar(u8, buffer[0..bytes_read], '\n');
 
     var line: []const u8 = undefined;
-    line = line_itterator.next().?;
+    line = line_iterator.next().?;
     std.debug.assert(std.mem.indexOf(u8, line, "MemTotal: ") != null);
     const mem_total = parseIntInString(u64, line);
 
-    line = line_itterator.next().?;
+    line = line_iterator.next().?;
     std.debug.assert(std.mem.indexOf(u8, line, "MemFree: ") != null);
 
-    line = line_itterator.next().?;
+    line = line_iterator.next().?;
     std.debug.assert(std.mem.indexOf(u8, line, "MemAvailable: ") != null);
     const mem_available = parseIntInString(u64, line);
 
